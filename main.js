@@ -3195,10 +3195,14 @@ function showPauseScreen(screenId) {
 
 // --- SUPORTE E CONTROLES MOBILE / TOQUE VIRTUAL ---
 function checkIsMobileDevice() {
-  const userAgentTouch = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  const touchPoints = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  const smallScreen = window.innerWidth <= 900;
-  return userAgentTouch || (touchPoints && smallScreen);
+  const userAgent = navigator.userAgent || '';
+  const isAndroidOrIOS = /Android|iPhone|iPad|iPod/i.test(userAgent);
+  const isMacTouch = /Macintosh/i.test(userAgent) && (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+  const isPointerCoarse = window.matchMedia && (window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(any-pointer: coarse)').matches);
+  const touchPoints = ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
+  const minDimensionSmall = Math.min(window.innerWidth, window.innerHeight) <= 900;
+
+  return isAndroidOrIOS || isMacTouch || isPointerCoarse || (touchPoints && minDimensionSmall);
 }
 
 let isMobileDevice = checkIsMobileDevice();
@@ -3229,14 +3233,34 @@ const touchHealCount = document.getElementById('touch-heal-count');
 const btnToggleMobileMode = document.getElementById('btn-toggle-mobile-mode');
 const mobileModeTag = document.getElementById('mobile-mode-tag');
 
+function updateRendererPerformanceSettings() {
+  const isMobile = checkIsMobileDevice() || forceMobileMode;
+  if (isMobile) {
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+    renderer.shadowMap.type = THREE.PCFShadowMap;
+  } else {
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  }
+}
+
 function updateMobileControlsVisibility() {
-  const showMobile = (isMobileDevice || forceMobileMode) && isGameStarted && !isGamePaused && !isPlayerDead;
+  updateRendererPerformanceSettings();
+  const isMobile = checkIsMobileDevice() || forceMobileMode;
+  const showMobile = isMobile && isGameStarted && !isGamePaused && !isPlayerDead;
   if (mobileControlsOverlay) {
     if (showMobile) {
       mobileControlsOverlay.classList.remove('hidden');
     } else {
       mobileControlsOverlay.classList.add('hidden');
     }
+  }
+
+  if (mobileModeTag) {
+    const isAutoDetected = checkIsMobileDevice();
+    mobileModeTag.textContent = forceMobileMode ? 'FORÇADO (ON)' : (isAutoDetected ? 'AUTO (DETECTADO)' : 'DESATIVADO');
+    mobileModeTag.style.background = forceMobileMode ? 'rgba(56, 189, 248, 0.35)' : (isAutoDetected ? 'rgba(52, 211, 153, 0.3)' : 'rgba(148, 163, 184, 0.2)');
+    mobileModeTag.style.color = forceMobileMode ? '#38bdf8' : (isAutoDetected ? '#34d399' : '#94a3b8');
   }
 }
 
@@ -3639,6 +3663,7 @@ function startTestRoomMode() {
   updateInventoryUI();
   updateWeaponsUI();
   updatePlayerHealthUI();
+  updateMobileControlsVisibility();
 
   setTimeout(() => {
     window.scrollTo(0, 0);
@@ -3671,6 +3696,7 @@ function exitTestRoomMode() {
 
   orbitControls.enabled = true;
   orbitControls.autoRotate = true;
+  updateMobileControlsVisibility();
 }
 
 function startGame() {
@@ -3703,6 +3729,7 @@ function startGame() {
 
   // Define o modelo ativo
   updateActiveCharacterModel();
+  updateMobileControlsVisibility();
 
   // Força o navegador a voltar para o topo e recalcular o tamanho do canvas
   // Isso evita o bug da tela cortada pela metade ao ocultar o menu modal.
@@ -5157,8 +5184,8 @@ function animate() {
 
     // 3. Sistema de Oclusão e Escondimento Dinâmico de Paredes (Wall Transparency Fade)
     // Marca todas as paredes para voltarem a opacas (1.0)
-    for (const wall of allWallMeshes) {
-      wall.userData.targetOpacity = 1.0;
+    for (let i = 0; i < allWallMeshes.length; i++) {
+      allWallMeshes[i].userData.targetOpacity = 1.0;
     }
 
     // Dispara raio da câmera até o jogador para detectar qualquer parede bloqueando a visão
@@ -5171,42 +5198,49 @@ function animate() {
       cameraRaycaster.near = 0.05;
 
       const occludingHits = cameraRaycaster.intersectObjects(allWallMeshes, false);
-      for (const hit of occludingHits) {
-        if (hit.object && hit.object.userData && hit.object.userData.isWall) {
-          hit.object.userData.targetOpacity = 0.08;
-          if (hit.object.userData.trim) hit.object.userData.trim.userData.targetOpacity = 0.08;
-          if (hit.object.userData.parentWall) hit.object.userData.parentWall.userData.targetOpacity = 0.08;
+      for (let i = 0; i < occludingHits.length; i++) {
+        const hitObj = occludingHits[i].object;
+        if (hitObj && hitObj.userData && hitObj.userData.isWall) {
+          hitObj.userData.targetOpacity = 0.08;
+          if (hitObj.userData.trim) hitObj.userData.trim.userData.targetOpacity = 0.08;
+          if (hitObj.userData.parentWall) hitObj.userData.parentWall.userData.targetOpacity = 0.08;
         }
       }
     }
 
     // Também esconde qualquer parede muito próxima da câmera (< 0.75m) para evitar visão obstruída
     const camPoint = camera.position;
-    for (const wall of allWallMeshes) {
-      if (wall.geometry && wall.geometry.parameters) {
-        const p = wall.geometry.parameters;
-        const halfW = (p.width || 1) / 2 + 0.45;
-        const halfH = (p.height || 1) / 2 + 0.45;
-        const halfD = (p.depth || 1) / 2 + 0.45;
-        const isNear = (
-          camPoint.x >= wall.position.x - halfW && camPoint.x <= wall.position.x + halfW &&
-          camPoint.y >= wall.position.y - halfH && camPoint.y <= wall.position.y + halfH &&
-          camPoint.z >= wall.position.z - halfD && camPoint.z <= wall.position.z + halfD
-        );
-        if (isNear) {
-          wall.userData.targetOpacity = Math.min(wall.userData.targetOpacity !== undefined ? wall.userData.targetOpacity : 1.0, 0.08);
-          if (wall.userData.trim) wall.userData.trim.userData.targetOpacity = 0.08;
-          if (wall.userData.parentWall) wall.userData.parentWall.userData.targetOpacity = 0.08;
+    for (let i = 0; i < allWallMeshes.length; i++) {
+      const wall = allWallMeshes[i];
+      if (wall.position.distanceToSquared(camPoint) < 36) {
+        if (wall.geometry && wall.geometry.parameters) {
+          const p = wall.geometry.parameters;
+          const halfW = (p.width || 1) / 2 + 0.45;
+          const halfH = (p.height || 1) / 2 + 0.45;
+          const halfD = (p.depth || 1) / 2 + 0.45;
+          const isNear = (
+            camPoint.x >= wall.position.x - halfW && camPoint.x <= wall.position.x + halfW &&
+            camPoint.y >= wall.position.y - halfH && camPoint.y <= wall.position.y + halfH &&
+            camPoint.z >= wall.position.z - halfD && camPoint.z <= wall.position.z + halfD
+          );
+          if (isNear) {
+            wall.userData.targetOpacity = Math.min(wall.userData.targetOpacity !== undefined ? wall.userData.targetOpacity : 1.0, 0.08);
+            if (wall.userData.trim) wall.userData.trim.userData.targetOpacity = 0.08;
+            if (wall.userData.parentWall) wall.userData.parentWall.userData.targetOpacity = 0.08;
+          }
         }
       }
     }
 
-    // Interpola a opacidade suavemente em tempo real
-    for (const wall of allWallMeshes) {
+    // Interpola a opacidade suavemente em tempo real sem causar recompilação de materiais
+    for (let i = 0; i < allWallMeshes.length; i++) {
+      const wall = allWallMeshes[i];
       if (wall.material) {
+        if (!wall.material.transparent) wall.material.transparent = true;
         const targetOp = wall.userData.targetOpacity !== undefined ? wall.userData.targetOpacity : 1.0;
-        wall.material.opacity = THREE.MathUtils.lerp(wall.material.opacity, targetOp, delta * 14.0);
-        wall.material.transparent = wall.material.opacity < 0.99;
+        if (Math.abs(wall.material.opacity - targetOp) > 0.002) {
+          wall.material.opacity = THREE.MathUtils.lerp(wall.material.opacity, targetOp, delta * 14.0);
+        }
       }
     }
   } else {

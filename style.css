@@ -2063,9 +2063,7 @@ body, html {
 
 .mobile-top-btn {
   padding: 8px 14px;
-  background: rgba(18, 24, 38, 0.82);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(18, 24, 38, 0.92);
   border: 1px solid var(--panel-border);
   color: var(--text-main);
   border-radius: 12px;
@@ -2104,12 +2102,10 @@ body, html {
   width: 140px;
   height: 140px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(15, 23, 42, 0.65) 100%);
-  border: 2px solid rgba(56, 189, 248, 0.45);
-  box-shadow: 0 0 24px rgba(56, 189, 248, 0.25), inset 0 0 20px rgba(0, 0, 0, 0.7);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border: 2px solid rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.35), inset 0 0 20px rgba(0, 0, 0, 0.8);
   position: relative;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   flex-shrink: 0;
 }
 
@@ -2168,9 +2164,8 @@ body, html {
 /* Estilo Geral dos Botões Mobile */
 .mobile-btn {
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(15, 23, 42, 0.88);
   color: #ffffff;
   cursor: pointer;
   display: flex;
@@ -2180,7 +2175,7 @@ body, html {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
   transition: transform 0.08s ease, filter 0.08s ease, box-shadow 0.08s ease;
   font-family: var(--font-sans);
 }
