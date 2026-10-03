@@ -245,6 +245,65 @@
       <span id="prompt-text">Interagir com Interruptor</span>
     </div>
 
+    <!-- Controles de Toque para Celular / Mobile (Virtual Touch Controls Overlay) -->
+    <div id="mobile-touch-controls" class="mobile-touch-controls hidden">
+      <!-- Barra de Ações Rápidas de Topo (Pausa, Câmera) -->
+      <div class="mobile-top-bar">
+        <button id="btn-touch-pause" class="mobile-top-btn glass-panel" title="Pausar Jogo">
+          <span>⏸️ PAUSA</span>
+        </button>
+        <button id="btn-touch-cam-mode" class="mobile-top-btn glass-panel" title="Alternar Modo de Câmera Mobile">
+          <span id="touch-cam-label">📷 COSTAS (FIXA)</span>
+        </button>
+      </div>
+
+      <!-- Zona do Joystick Analógico Esquerdo (Movimento WASD) -->
+      <div id="touch-joystick-zone" class="touch-joystick-zone">
+        <div id="v-joystick-base" class="v-joystick-base">
+          <div id="v-joystick-thumb" class="v-joystick-thumb"></div>
+        </div>
+      </div>
+
+      <!-- Zona de Olhar / Rotacionar Câmera (Lado Direito da Tela) -->
+      <div id="touch-look-zone" class="touch-look-zone"></div>
+
+      <!-- Cluster Ergonômico de Botões de Ação na Direita -->
+      <div class="mobile-action-cluster">
+        <!-- Sub-linha de Utilitários (Curar, Recarregar, Trocar Arma, Pular) -->
+        <div class="action-sub-row">
+          <button id="btn-touch-heal" class="mobile-btn mobile-btn-small mobile-btn-heal" title="Usar Remédio (Q)">
+            <span class="btn-icon">💊</span>
+            <span class="btn-subtext" id="touch-heal-count">0</span>
+          </button>
+          <button id="btn-touch-reload" class="mobile-btn mobile-btn-small mobile-btn-reload" title="Recarregar (R)">
+            <span class="btn-icon">🔄</span>
+          </button>
+          <button id="btn-touch-swap" class="mobile-btn mobile-btn-small mobile-btn-swap" title="Trocar Arma (1/2)">
+            <span class="btn-icon">🔫</span>
+          </button>
+          <button id="btn-touch-jump" class="mobile-btn mobile-btn-small mobile-btn-jump" title="Pular (Espaço)">
+            <span class="btn-icon">⬆️</span>
+          </button>
+        </div>
+
+        <!-- Grupo Principal de Ação Ergonomicamente Disposto (Abrir/Interagir, Mirar, Atirar) -->
+        <div class="action-main-row">
+          <button id="btn-touch-interact" class="mobile-btn mobile-btn-interact" title="Interagir / Abrir Porta (E)">
+            <span class="btn-icon">🚪</span>
+            <span class="btn-label">ABRIR / E</span>
+          </button>
+          <button id="btn-touch-aim" class="mobile-btn mobile-btn-aim" title="Mirar (LT / RMB)">
+            <span class="btn-icon">🎯</span>
+            <span class="btn-label">MIRAR</span>
+          </button>
+          <button id="btn-touch-shoot" class="mobile-btn mobile-btn-shoot" title="Atirar (RT / G)">
+            <span class="btn-icon">💥</span>
+            <span class="btn-label">ATIRAR</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Tela de Carregamento (Exibida enquanto os assets são baixados) -->
     <div id="loading-screen" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #cbd5e1; font-family: 'Outfit', sans-serif;">
       <div style="font-size: 3rem; margin-bottom: 20px;">☣️</div>
@@ -302,6 +361,12 @@
             <button id="btn-open-instructions" class="btn-menu-secondary">
               <span class="btn-icon">📜</span>
               <span class="btn-label">Missão & Controles</span>
+            </button>
+
+            <button id="btn-toggle-mobile-mode" class="btn-menu-secondary">
+              <span class="btn-icon">📱</span>
+              <span class="btn-label">Controles Touch Mobile</span>
+              <span id="mobile-mode-tag" class="diff-tag-pill" style="background: rgba(52, 211, 153, 0.25); color: #34d399;">AUTO</span>
             </button>
           </div>
 

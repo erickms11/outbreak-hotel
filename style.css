@@ -2030,6 +2030,336 @@ body, html {
   }
 }
 
+/* --- ADAPTAÇÃO MOBILE & CONTROLES TOUCH VIRTUAIS --- */
+
+.mobile-touch-controls.hidden {
+  display: none !important;
+}
+
+.mobile-touch-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 150;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  overflow: hidden;
+}
+
+/* Barra Superior do Celular (Pausa / Modo Câmera) */
+.mobile-top-bar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+  z-index: 170;
+}
+
+.mobile-top-btn {
+  padding: 8px 14px;
+  background: rgba(18, 24, 38, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border);
+  color: var(--text-main);
+  border-radius: 12px;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.mobile-top-btn:active {
+  transform: scale(0.94);
+  background: rgba(56, 189, 248, 0.25);
+}
+
+/* Zona do Joystick Analógico Esquerdo */
+.touch-joystick-zone {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  width: 170px;
+  height: 170px;
+  pointer-events: auto;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 160;
+}
+
+.v-joystick-base {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(15, 23, 42, 0.65) 100%);
+  border: 2px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.25), inset 0 0 20px rgba(0, 0, 0, 0.7);
+  position: relative;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  flex-shrink: 0;
+}
+
+.v-joystick-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #38bdf8 0%, #0284c7 100%);
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.9);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Zona para Rotação da Câmera por Arrasto (Lado Direito da Tela) */
+.touch-look-zone {
+  position: absolute;
+  top: 70px;
+  right: 0;
+  width: 55vw;
+  height: calc(100vh - 240px);
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 155;
+}
+
+/* Cluster de Botões de Ação na Direita */
+.mobile-action-cluster {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 165;
+}
+
+.action-sub-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.action-main-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Estilo Geral dos Botões Mobile */
+.mobile-btn {
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  transition: transform 0.08s ease, filter 0.08s ease, box-shadow 0.08s ease;
+  font-family: var(--font-sans);
+}
+
+.mobile-btn:active, .mobile-btn.active {
+  transform: scale(0.90) !important;
+  filter: brightness(1.35) !important;
+}
+
+/* Botões Utilitários Menores */
+.mobile-btn-small {
+  width: 52px;
+  height: 52px;
+  font-size: 1.1rem;
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(255, 255, 255, 0.15);
+  position: relative;
+}
+
+.mobile-btn-small .btn-subtext {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #facc15;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1px 4px;
+  border-radius: 6px;
+}
+
+/* Botão de Atirar (Destaque Vermelho) */
+.mobile-btn-shoot {
+  width: 76px;
+  height: 76px;
+  background: radial-gradient(circle, #ef4444 0%, #991b1b 100%);
+  border-color: #fca5a5;
+  box-shadow: 0 0 22px rgba(239, 68, 68, 0.7);
+  font-weight: 800;
+}
+
+.mobile-btn-shoot .btn-icon {
+  font-size: 1.4rem;
+}
+
+.mobile-btn-shoot .btn-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+/* Botão de Mirar (Roxo / Azul) */
+.mobile-btn-aim {
+  width: 66px;
+  height: 66px;
+  background: radial-gradient(circle, #818cf8 0%, #4338ca 100%);
+  border-color: #c7d2fe;
+  box-shadow: 0 0 18px rgba(129, 140, 248, 0.6);
+}
+
+.mobile-btn-aim.aim-active {
+  border-color: #facc15 !important;
+  box-shadow: 0 0 25px rgba(250, 204, 21, 0.9) !important;
+  background: radial-gradient(circle, #eab308 0%, #ca8a04 100%) !important;
+}
+
+.mobile-btn-aim .btn-icon {
+  font-size: 1.2rem;
+}
+
+.mobile-btn-aim .btn-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+/* Botão de Interagir / Abrir Portas (Verde Destaque) */
+.mobile-btn-interact {
+  width: 68px;
+  height: 68px;
+  background: radial-gradient(circle, #10b981 0%, #047857 100%);
+  border-color: #6ee7b7;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+}
+
+.mobile-btn-interact.pulse-door {
+  animation: mobileInteractPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes mobileInteractPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 32px rgba(52, 211, 153, 0.95);
+    border-color: #ffffff;
+  }
+}
+
+.mobile-btn-interact .btn-icon {
+  font-size: 1.3rem;
+}
+
+.mobile-btn-interact .btn-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+/* --- REGRAS DE ADAPTAÇÃO PROPORCIONAL DE TELA PARA MOBILE (MAX-WIDTH 900PX) --- */
+@media (max-width: 900px) {
+  #start-menu-modal, #pause-modal, #victory-modal, #game-over-modal {
+    padding: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .start-menu-card, .pause-card, .victory-card, .game-over-card {
+    max-width: 95vw !important;
+    max-height: 88vh !important;
+    overflow-y: auto !important;
+    padding: 16px 14px !important;
+    border-radius: 16px !important;
+    margin: auto !important;
+  }
+
+  .menu-header h1 {
+    font-size: 1.6rem !important;
+    letter-spacing: 2px !important;
+  }
+
+  .hotel-emblem {
+    font-size: 2.2rem !important;
+  }
+
+  .menu-tagline {
+    font-size: 0.8rem !important;
+  }
+
+  .btn-start-game {
+    padding: 12px 16px !important;
+    font-size: 0.95rem !important;
+    min-height: 46px !important;
+  }
+
+  .btn-menu-secondary {
+    padding: 10px 12px !important;
+    font-size: 0.85rem !important;
+    min-height: 42px !important;
+  }
+
+  .character-selection {
+    padding: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .difficulty-presets-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .permanent-weapon-hud {
+    top: 10px !important;
+    left: 10px !important;
+    bottom: auto !important;
+    right: auto !important;
+    transform: scale(0.85);
+    transform-origin: top left;
+    max-width: calc(100vw - 120px);
+  }
+
+  .interaction-prompt {
+    bottom: auto !important;
+    top: 75px !important;
+    transform: translateX(-50%) scale(0.9);
+  }
+}
+
+
 
 
 

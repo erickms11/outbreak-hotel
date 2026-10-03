@@ -3193,6 +3193,284 @@ function showPauseScreen(screenId) {
   });
 }
 
+// --- SUPORTE E CONTROLES MOBILE / TOQUE VIRTUAL ---
+function checkIsMobileDevice() {
+  const userAgentTouch = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const touchPoints = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  const smallScreen = window.innerWidth <= 900;
+  return userAgentTouch || (touchPoints && smallScreen);
+}
+
+let isMobileDevice = checkIsMobileDevice();
+let forceMobileMode = false;
+let isMobileCameraMode = true; // Câmera fixa próxima às costas do jogador no mobile por padrão
+
+let touchMoveX = 0;
+let touchMoveY = 0;
+let touchAiming = false;
+
+// Elementos da UI Mobile
+const mobileControlsOverlay = document.getElementById('mobile-touch-controls');
+const btnTouchPause = document.getElementById('btn-touch-pause');
+const btnTouchCamMode = document.getElementById('btn-touch-cam-mode');
+const touchCamLabel = document.getElementById('touch-cam-label');
+const touchJoystickZone = document.getElementById('touch-joystick-zone');
+const vJoystickBase = document.getElementById('v-joystick-base');
+const vJoystickThumb = document.getElementById('v-joystick-thumb');
+const touchLookZone = document.getElementById('touch-look-zone');
+const btnTouchShoot = document.getElementById('btn-touch-shoot');
+const btnTouchAim = document.getElementById('btn-touch-aim');
+const btnTouchInteract = document.getElementById('btn-touch-interact');
+const btnTouchReload = document.getElementById('btn-touch-reload');
+const btnTouchHeal = document.getElementById('btn-touch-heal');
+const btnTouchJump = document.getElementById('btn-touch-jump');
+const btnTouchSwap = document.getElementById('btn-touch-swap');
+const touchHealCount = document.getElementById('touch-heal-count');
+const btnToggleMobileMode = document.getElementById('btn-toggle-mobile-mode');
+const mobileModeTag = document.getElementById('mobile-mode-tag');
+
+function updateMobileControlsVisibility() {
+  const showMobile = (isMobileDevice || forceMobileMode) && isGameStarted && !isGamePaused && !isPlayerDead;
+  if (mobileControlsOverlay) {
+    if (showMobile) {
+      mobileControlsOverlay.classList.remove('hidden');
+    } else {
+      mobileControlsOverlay.classList.add('hidden');
+    }
+  }
+}
+
+// Joystick Analógico Virtual
+let joystickTouchId = null;
+let joystickCenter = { x: 0, y: 0 };
+const JOYSTICK_MAX_RADIUS = 50;
+
+if (touchJoystickZone && vJoystickBase && vJoystickThumb) {
+  const updateJoystickPosition = (clientX, clientY) => {
+    let dx = clientX - joystickCenter.x;
+    let dy = clientY - joystickCenter.y;
+    let dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist > JOYSTICK_MAX_RADIUS) {
+      dx = (dx / dist) * JOYSTICK_MAX_RADIUS;
+      dy = (dy / dist) * JOYSTICK_MAX_RADIUS;
+    }
+
+    vJoystickThumb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+    touchMoveX = dx / JOYSTICK_MAX_RADIUS;
+    touchMoveY = dy / JOYSTICK_MAX_RADIUS;
+  };
+
+  const resetJoystick = () => {
+    joystickTouchId = null;
+    vJoystickThumb.style.transform = 'translate(-50%, -50%)';
+    touchMoveX = 0;
+    touchMoveY = 0;
+  };
+
+  touchJoystickZone.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (joystickTouchId !== null) return;
+    const touch = e.changedTouches[0];
+    joystickTouchId = touch.identifier;
+    const rect = vJoystickBase.getBoundingClientRect();
+    joystickCenter = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    };
+    updateJoystickPosition(touch.clientX, touch.clientY);
+  }, { passive: false });
+
+  touchJoystickZone.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (joystickTouchId === null) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (touch.identifier === joystickTouchId) {
+        updateJoystickPosition(touch.clientX, touch.clientY);
+        break;
+      }
+    }
+  }, { passive: false });
+
+  touchJoystickZone.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (joystickTouchId === null) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === joystickTouchId) {
+        resetJoystick();
+        break;
+      }
+    }
+  }, { passive: false });
+
+  touchJoystickZone.addEventListener('touchcancel', (e) => {
+    resetJoystick();
+  }, { passive: false });
+}
+
+// Controle de Olhar por Arrasto (Touch Look Zone)
+let lookTouchId = null;
+let lastLookPos = { x: 0, y: 0 };
+
+if (touchLookZone) {
+  touchLookZone.addEventListener('touchstart', (e) => {
+    if (lookTouchId !== null) return;
+    const touch = e.changedTouches[0];
+    lookTouchId = touch.identifier;
+    lastLookPos = { x: touch.clientX, y: touch.clientY };
+  }, { passive: true });
+
+  touchLookZone.addEventListener('touchmove', (e) => {
+    if (lookTouchId === null) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (touch.identifier === lookTouchId) {
+        const dx = touch.clientX - lastLookPos.x;
+        const dy = touch.clientY - lastLookPos.y;
+        if (isThirdPerson) {
+          cameraYaw -= dx * 0.006;
+          cameraPitch = THREE.MathUtils.clamp(cameraPitch + dy * 0.005, -0.15, 1.15);
+        }
+        lastLookPos = { x: touch.clientX, y: touch.clientY };
+        break;
+      }
+    }
+  }, { passive: true });
+
+  const endLookTouch = (e) => {
+    if (lookTouchId === null) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === lookTouchId) {
+        lookTouchId = null;
+        break;
+      }
+    }
+  };
+
+  touchLookZone.addEventListener('touchend', endLookTouch, { passive: true });
+  touchLookZone.addEventListener('touchcancel', endLookTouch, { passive: true });
+}
+
+// Botões de Ação Touch
+let shootIntervalId = null;
+
+if (btnTouchShoot) {
+  btnTouchShoot.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    fireActiveWeapon();
+    if (!shootIntervalId) {
+      shootIntervalId = setInterval(() => {
+        if (isGameStarted && !isGamePaused && !isPlayerDead) fireActiveWeapon();
+      }, 200);
+    }
+  }, { passive: false });
+
+  const stopShoot = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (shootIntervalId) {
+      clearInterval(shootIntervalId);
+      shootIntervalId = null;
+    }
+  };
+  btnTouchShoot.addEventListener('touchend', stopShoot, { passive: false });
+  btnTouchShoot.addEventListener('touchcancel', stopShoot, { passive: false });
+}
+
+if (btnTouchAim) {
+  btnTouchAim.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    touchAiming = !touchAiming;
+    if (touchAiming) {
+      btnTouchAim.classList.add('aim-active');
+    } else {
+      btnTouchAim.classList.remove('aim-active');
+    }
+  }, { passive: false });
+}
+
+if (btnTouchInteract) {
+  btnTouchInteract.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    handleInteraction();
+  }, { passive: false });
+}
+
+if (btnTouchReload) {
+  btnTouchReload.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    reloadActiveWeapon();
+  }, { passive: false });
+}
+
+if (btnTouchHeal) {
+  btnTouchHeal.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    useMedkit();
+    if (touchHealCount) touchHealCount.textContent = `${playerMedkits}`;
+  }, { passive: false });
+}
+
+if (btnTouchJump) {
+  btnTouchJump.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    updateKeyState('space', true);
+  }, { passive: false });
+  btnTouchJump.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    updateKeyState('space', false);
+  }, { passive: false });
+}
+
+if (btnTouchSwap) {
+  btnTouchSwap.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (equippedWeaponId === null) {
+      equipWeapon('revolver');
+    } else if (equippedWeaponId === 'revolver') {
+      equipWeapon('shotgun');
+    } else {
+      equipWeapon(null);
+    }
+  }, { passive: false });
+}
+
+if (btnTouchPause) {
+  btnTouchPause.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    togglePauseGame();
+  }, { passive: false });
+}
+
+if (btnTouchCamMode) {
+  btnTouchCamMode.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    isMobileCameraMode = !isMobileCameraMode;
+    if (touchCamLabel) {
+      touchCamLabel.textContent = isMobileCameraMode ? '📷 COSTAS (FIXA)' : '📷 CÂMERA LIVRE';
+    }
+  }, { passive: false });
+}
+
+if (btnToggleMobileMode) {
+  btnToggleMobileMode.addEventListener('click', () => {
+    forceMobileMode = !forceMobileMode;
+    isMobileDevice = checkIsMobileDevice() || forceMobileMode;
+    if (mobileModeTag) {
+      mobileModeTag.textContent = forceMobileMode ? 'ATIVADO' : (checkIsMobileDevice() ? 'AUTO' : 'DESATIVADO');
+      mobileModeTag.style.background = forceMobileMode ? 'rgba(56, 189, 248, 0.3)' : 'rgba(52, 211, 153, 0.25)';
+      mobileModeTag.style.color = forceMobileMode ? '#38bdf8' : '#34d399';
+    }
+    updateMobileControlsVisibility();
+  });
+}
+
+window.addEventListener('resize', () => {
+  isMobileDevice = checkIsMobileDevice();
+  updateMobileControlsVisibility();
+});
+
 function togglePauseGame(forceState) {
   if (!isGameStarted || isPlayerDead) return;
 
@@ -3211,6 +3489,7 @@ function togglePauseGame(forceState) {
       startGameplayBGM();
     }
   }
+  updateMobileControlsVisibility();
 }
 
 function initMenuNavigation() {
@@ -4505,6 +4784,12 @@ function animate() {
     if (keys.s) inputVector.sub(forward);
     if (keys.a) inputVector.sub(right);
     if (keys.d) inputVector.add(right);
+
+    // Joystick Touch Mobile
+    if (Math.abs(touchMoveX) > 0.05 || Math.abs(touchMoveY) > 0.05) {
+      inputVector.addScaledVector(forward, -touchMoveY);
+      inputVector.addScaledVector(right, touchMoveX);
+    }
   }
 
   // --- LEITURA DO CONTROLE XBOX / GAMEPAD ---
@@ -4648,12 +4933,22 @@ function animate() {
 
   // Atualiza estado de mira (Aiming)
   const prevAiming = isAiming;
-  isAiming = isGameStarted && !isGamePaused && !isPlayerDead && (equippedWeaponId !== null) && (gamepadAiming || mouseAiming || keyAiming);
+  isAiming = isGameStarted && !isGamePaused && !isPlayerDead && (equippedWeaponId !== null) && (gamepadAiming || mouseAiming || keyAiming || touchAiming);
 
   const crosshairContainer = document.getElementById('crosshair-container');
   if (crosshairContainer) {
     if (isAiming) crosshairContainer.classList.add('is-aiming');
     else crosshairContainer.classList.remove('is-aiming');
+  }
+
+  // Destaque visual no botão de interagir touch se houver prompt ativo na tela
+  if (btnTouchInteract) {
+    const promptElem = document.getElementById('interaction-prompt');
+    if (promptElem && !promptElem.classList.contains('hidden')) {
+      btnTouchInteract.classList.add('pulse-door');
+    } else {
+      btnTouchInteract.classList.remove('pulse-door');
+    }
   }
 
   if (prevAiming !== isAiming) {
@@ -4798,6 +5093,21 @@ function animate() {
   playerGroup.position.copy(newPos);
 
   if (isThirdPerson && isGameStarted) {
+    // Modo de Câmera Mobile: Fixa próxima às costas do jogador
+    if ((isMobileDevice || forceMobileMode) && isMobileCameraMode) {
+      if (lookTouchId === null) {
+        let targetYaw = playerRotation + Math.PI;
+        let yawDiff = targetYaw - cameraYaw;
+        while (yawDiff < -Math.PI) yawDiff += Math.PI * 2;
+        while (yawDiff > Math.PI) yawDiff -= Math.PI * 2;
+        cameraYaw += yawDiff * Math.min(1.0, 7.0 * delta);
+      }
+      const targetDist = isAiming ? 1.9 : 2.5;
+      cameraDistance = THREE.MathUtils.lerp(cameraDistance, targetDist, Math.min(1.0, 8.0 * delta));
+      const targetPitch = isAiming ? 0.18 : 0.22;
+      cameraPitch = THREE.MathUtils.lerp(cameraPitch, targetPitch, Math.min(1.0, 8.0 * delta));
+    }
+
     const playerTarget = playerGroup.position.clone().add(new THREE.Vector3(0, 1.2, 0));
 
     const offsetX = cameraDistance * Math.sin(cameraYaw) * Math.cos(cameraPitch);
