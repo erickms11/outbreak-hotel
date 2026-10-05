@@ -19,6 +19,12 @@
         }
       }
     </script>
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Outbreak Hotel" />
+    <meta name="theme-color" content="#090d16" />
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
@@ -346,28 +352,32 @@
               </svg>
             </button>
 
-            <button id="btn-start-test-room" class="btn-menu-secondary" style="border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.12);">
-              <span class="btn-icon">🧪</span>
-              <span class="btn-label">Sala de Testes (Sandbox)</span>
-              <span class="diff-tag-pill" style="background: rgba(56,189,248,0.25); color: #38bdf8;">TEST LAB</span>
-            </button>
+            <!-- Barra Horizontal de Ícones Secundários (Design Clean) -->
+            <div class="menu-icon-bar">
+              <button id="btn-start-test-room" class="btn-menu-icon" title="Sala de Testes (Sandbox)" aria-label="Sala de Testes">
+                <span class="btn-icon">🧪</span>
+              </button>
 
-            <button id="btn-open-difficulty" class="btn-menu-secondary">
-              <span class="btn-icon">⚙️</span>
-              <span class="btn-label">Configurar Dificuldade</span>
-              <span id="main-diff-tag" class="diff-tag-pill">NORMAL (1.0x)</span>
-            </button>
+              <button id="btn-open-difficulty" class="btn-menu-icon" title="Configurar Dificuldade" aria-label="Dificuldade">
+                <span class="btn-icon">⚙️</span>
+              </button>
 
-            <button id="btn-open-instructions" class="btn-menu-secondary">
-              <span class="btn-icon">📜</span>
-              <span class="btn-label">Missão & Controles</span>
-            </button>
+              <button id="btn-open-instructions" class="btn-menu-icon" title="Missão & Controles" aria-label="Missão e Controles">
+                <span class="btn-icon">📜</span>
+              </button>
 
-            <button id="btn-toggle-mobile-mode" class="btn-menu-secondary">
-              <span class="btn-icon">📱</span>
-              <span class="btn-label">Controles Touch Mobile</span>
-              <span id="mobile-mode-tag" class="diff-tag-pill" style="background: rgba(52, 211, 153, 0.25); color: #34d399;">AUTO</span>
-            </button>
+              <button id="btn-toggle-fullscreen" class="btn-menu-icon" title="Tela Cheia (Fullscreen)" aria-label="Tela Cheia">
+                <span class="btn-icon">⛶</span>
+              </button>
+
+              <button id="btn-pwa-install" class="btn-menu-icon hidden" title="Instalar App no Celular (PWA)" aria-label="Instalar App">
+                <span class="btn-icon">📲</span>
+              </button>
+
+              <button id="btn-toggle-mobile-mode" class="btn-menu-icon" title="Controles Touch Mobile" aria-label="Controles Touch">
+                <span class="btn-icon">📱</span>
+              </button>
+            </div>
           </div>
 
           <span class="start-key-hint">Pressione <strong>Espaço</strong>, <strong>Enter</strong> ou <strong>[A] no Controle</strong></span>

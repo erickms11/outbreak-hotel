@@ -70,7 +70,7 @@ function getAudioContext() {
 // --- SISTEMA DE TRILHA SONORA (BGM: MENU & GAMEPLAY) ---
 const menuBGM = new Audio('assets/sounds/menu.mp3');
 menuBGM.loop = true;
-menuBGM.volume = 0.35;
+menuBGM.volume = 0.20;
 
 const GAMEPLAY_BGM_TRACKS = [
   'assets/sounds/background1.mp3',
@@ -1171,6 +1171,14 @@ function damagePlayer(amount, enemyName = 'Criatura') {
 
   if (playerHealth <= 0) {
     isPlayerDead = true;
+    velocity.set(0, 0, 0);
+    inputVector.set(0, 0, 0);
+    keys.w = keys.a = keys.s = keys.d = keys.space = keys.shift = false;
+    touchMoveX = 0;
+    touchMoveY = 0;
+    mouseAiming = gamepadAiming = keyAiming = touchAiming = false;
+    isAiming = false;
+    if (typeof aimImpactDotMesh !== 'undefined' && aimImpactDotMesh) aimImpactDotMesh.visible = false;
     playZombieDeathSound(false);
     playPlayerAnim('death', 0.2);
     stopGameplayBGM();
@@ -1785,8 +1793,8 @@ createEnemy('enemy_105_2', 'Sombra Abissal Beta', 'stalker', -8.0, 1.0, 10.0, 11
 createEnemy('enemy_105_3', 'Sombra Abissal Gamma', 'stalker', -5.5, 1.0, 14.0, 115, 3.0, 30, false, 'q105', 'enemy3');
 createEnemy('enemy_105_4', 'Sombra Abissal Delta', 'stalker', -9.5, 1.0, 16.0, 115, 3.1, 30, false, 'q105', 'enemy1');
 
-// Q.106: 1 CHEFE ("Guardião da Câmara") - 450 HP, Drop da Chave Mestre 👑 (Boss anda mais devagar: baseSpeed 1.4)
-createEnemy('boss_106', 'Guardião da Câmara 👹', 'boss', 16.0, 1.5, 12.0, 450, 1.4, 40, true, 'q106', 'enemy_boss');
+// Q.106: 1 CHEFE ("Guardião da Câmara") - 700 HP, Drop da Chave Mestre 👑 (Boss com ataques especiais de longe e onda de choque)
+createEnemy('boss_106', 'Guardião da Câmara 👹', 'boss', 16.0, 1.5, 12.0, 700, 1.4, 40, true, 'q106', 'enemy_boss');
 
 // --- SISTEMA DE ANIMAÇÃO E MODELAGEM 3D DOS INIMIGOS E BOSS ---
 function setupAllEnemies() {
@@ -1958,9 +1966,8 @@ function updateBossHealthUI() {
     return;
   }
 
-  // A barra de vida do chefe só aparece quando ele for ativado (começar a perseguir / entrar em combate)
-  // e permanece visível na tela mesmo se o jogador sair da sala até que o chefe seja derrotado!
-  if (boss.isAggro || boss.hasMoved || boss.hp < boss.maxHp) {
+  // A barra de vida do chefe só aparece quando a porta do Q.106 for aberta e ele for ativado!
+  if ((boss.isAggro && boss.hasMoved) || boss.hp < boss.maxHp) {
     bossContainer.classList.remove('hidden');
     const pct = Math.max(0, Math.min(100, (boss.hp / boss.maxHp) * 100));
     if (bossFill) bossFill.style.width = `${pct}%`;
@@ -2083,6 +2090,225 @@ function updateBloodParticles(delta) {
   }
 }
 
+// --- SISTEMA OPTIMIZADO DE ATAQUES ESPECIAIS E PROJÉTEIS DO BOSS ---
+const activeBossProjectiles = [];
+const activeBossShockwaves = [];
+
+const bossOrbGeo = new THREE.SphereGeometry(0.24, 12, 12);
+const bossOrbMat = new THREE.MeshStandardMaterial({
+  color: 0xff1100,
+  emissive: 0xff3300,
+  emissiveIntensity: 3.5,
+  roughness: 0.1,
+});
+
+const bossShockRingGeo = new THREE.RingGeometry(0.85, 1.0, 32);
+
+function showBossWarningPrompt(message, durationMs = 2200) {
+  if (typeof interactionPrompt !== 'undefined' && interactionPrompt && typeof promptText !== 'undefined' && promptText) {
+    promptText.textContent = message;
+    interactionPrompt.classList.remove('hidden');
+    setTimeout(() => {
+      if (promptText && promptText.textContent === message) {
+        interactionPrompt.classList.add('hidden');
+      }
+    }, durationMs);
+  }
+}
+
+function spawnBossProjectile(boss) {
+  if (!boss || boss.isDead) return;
+
+  const spawnPos = boss.group.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+  const targetPos = playerGroup.position.clone().add(new THREE.Vector3(0, 0.45, 0));
+  const dir = targetPos.sub(spawnPos).normalize();
+
+  const orbMesh = new THREE.Mesh(bossOrbGeo, bossOrbMat);
+  orbMesh.position.copy(spawnPos);
+  scene.add(orbMesh);
+
+  activeBossProjectiles.push({
+    mesh: orbMesh,
+    dir: dir,
+    speed: 8.5,
+    life: 3.5,
+    damage: Math.round(25 * gameDifficulty.damageMultiplier),
+  });
+
+  playBossRoarSound();
+  showBossWarningPrompt('☣️ O GUARDIÃO LANÇOU UM ORBE CORROSIVO! DESVIE!', 1800);
+}
+
+function spawnBossShockwave(boss) {
+  if (!boss || boss.isDead) return;
+
+  const shockMat = new THREE.MeshStandardMaterial({
+    color: 0xff0033,
+    emissive: 0xff0044,
+    emissiveIntensity: 4.0,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.95,
+  });
+
+  const shockMesh = new THREE.Mesh(bossShockRingGeo, shockMat);
+  shockMesh.rotation.x = -Math.PI / 2;
+  shockMesh.position.set(boss.group.position.x, 0.06, boss.group.position.z);
+  shockMesh.scale.set(0.5, 0.5, 0.5);
+
+  scene.add(shockMesh);
+
+  activeBossShockwaves.push({
+    mesh: shockMesh,
+    center: boss.group.position.clone(),
+    scale: 0.5,
+    maxRadius: 8.5,
+    expandSpeed: 6.0,
+    life: 1.4,
+    maxLife: 1.4,
+    hasHitPlayer: false,
+    damage: Math.round(30 * gameDifficulty.damageMultiplier),
+  });
+
+  playBossRoarSound();
+  showBossWarningPrompt('⚠️ O BOSS BATEU NO CHÃO! PULE PARA ESQUIVAR DA ONDA DE CHOQUE! 🦘', 2400);
+}
+
+function updateBossAttacks(delta) {
+  // 1. Atualiza Orbes Corrosivos (Projéteis de Longe)
+  for (let i = activeBossProjectiles.length - 1; i >= 0; i--) {
+    const proj = activeBossProjectiles[i];
+    proj.life -= delta;
+
+    if (proj.life <= 0) {
+      spawnBloodSplatter(proj.mesh.position, proj.dir.clone().negate(), 12, true);
+      scene.remove(proj.mesh);
+      activeBossProjectiles.splice(i, 1);
+      continue;
+    }
+
+    proj.mesh.position.addScaledVector(proj.dir, proj.speed * delta);
+
+    const distToPlayer = proj.mesh.position.distanceTo(playerGroup.position.clone().add(new THREE.Vector3(0, 0.5, 0)));
+    if (distToPlayer < 0.85) {
+      damagePlayer(proj.damage, 'Orbe Corrosivo do Boss ☣️');
+      spawnBloodSplatter(proj.mesh.position, proj.dir, 20, true);
+      scene.remove(proj.mesh);
+      activeBossProjectiles.splice(i, 1);
+      continue;
+    }
+
+    for (const wall of wallColliders) {
+      if (wall.disabled) continue;
+      if (
+        proj.mesh.position.x > wall.minX && proj.mesh.position.x < wall.maxX &&
+        proj.mesh.position.z > wall.minZ && proj.mesh.position.z < wall.maxZ
+      ) {
+        spawnBloodSplatter(proj.mesh.position, proj.dir.clone().negate(), 14, true);
+        scene.remove(proj.mesh);
+        activeBossProjectiles.splice(i, 1);
+        break;
+      }
+    }
+  }
+
+  // 2. Atualiza Ondas de Choque Terrestres
+  for (let i = activeBossShockwaves.length - 1; i >= 0; i--) {
+    const sw = activeBossShockwaves[i];
+    sw.life -= delta;
+
+    if (sw.life <= 0 || sw.scale >= sw.maxRadius) {
+      if (sw.mesh.material) sw.mesh.material.dispose();
+      scene.remove(sw.mesh);
+      activeBossShockwaves.splice(i, 1);
+      continue;
+    }
+
+    sw.scale += sw.expandSpeed * delta;
+    sw.mesh.scale.set(sw.scale, sw.scale, sw.scale);
+
+    const progress = 1 - (sw.life / sw.maxLife);
+    if (sw.mesh.material) {
+      sw.mesh.material.opacity = Math.max(0, 0.95 * (1 - progress));
+    }
+
+    if (!sw.hasHitPlayer && !isPlayerDead) {
+      const distToPlayer = Math.hypot(playerGroup.position.x - sw.center.x, playerGroup.position.z - sw.center.z);
+      if (Math.abs(distToPlayer - sw.scale) < 0.85) {
+        const isPlayerJumping = !isGrounded && (playerGroup.position.y > 1.35);
+
+        if (isPlayerJumping) {
+          sw.hasHitPlayer = true;
+          showBossWarningPrompt('✨ Esquivou da Onda de Choque com Sucesso! 🦘', 1200);
+        } else {
+          sw.hasHitPlayer = true;
+          damagePlayer(sw.damage, 'Onda de Choque do Boss 💥');
+          const knockDir = playerGroup.position.clone().sub(sw.center);
+          knockDir.y = 0;
+          knockDir.normalize();
+          velocity.x += knockDir.x * 3.5;
+          velocity.z += knockDir.z * 3.5;
+        }
+      }
+    }
+  }
+}
+
+// --- SISTEMA DE VERIFICAÇÃO DE LINHA DE VISÃO DIRETA (PREVINE TIROS ATRAVÉS DE PAREDES E PORTAS) ---
+function hasLineOfSight(fromPos, toPos) {
+  const dir = toPos.clone().sub(fromPos);
+  const dist = dir.length();
+  if (dist < 0.1) return true;
+  dir.normalize();
+
+  // 1. Checa paredes em wallColliders
+  for (const wall of wallColliders) {
+    if (wall.disabled) continue;
+    const minX = wall.minX - 0.05;
+    const maxX = wall.maxX + 0.05;
+    const minZ = wall.minZ - 0.05;
+    const maxZ = wall.maxZ + 0.05;
+
+    const t1 = (minX - fromPos.x) / (dir.x || 1e-6);
+    const t2 = (maxX - fromPos.x) / (dir.x || 1e-6);
+    const t3 = (minZ - fromPos.z) / (dir.z || 1e-6);
+    const t4 = (maxZ - fromPos.z) / (dir.z || 1e-6);
+
+    const tmin = Math.max(Math.min(t1, t2), Math.min(t3, t4));
+    const tmax = Math.min(Math.max(t1, t2), Math.max(t3, t4));
+
+    if (tmax >= 0 && tmin <= tmax && tmin < dist - 0.3 && tmax > 0.3) {
+      return false; // Paredes bloqueiam a linha de tiro!
+    }
+  }
+
+  // 2. Checa portas FECHADAS
+  for (const door of interactiveDoors) {
+    if (door.isOpen) continue;
+    const doorDist = Math.hypot(door.x - fromPos.x, door.z - fromPos.z);
+    if (doorDist < dist + 1.2) {
+      const doorMinX = door.x - 1.5;
+      const doorMaxX = door.x + 1.5;
+      const doorMinZ = door.z - 1.5;
+      const doorMaxZ = door.z + 1.5;
+
+      const t1 = (doorMinX - fromPos.x) / (dir.x || 1e-6);
+      const t2 = (doorMaxX - fromPos.x) / (dir.x || 1e-6);
+      const t3 = (doorMinZ - fromPos.z) / (dir.z || 1e-6);
+      const t4 = (doorMaxZ - fromPos.z) / (dir.z || 1e-6);
+
+      const tmin = Math.max(Math.min(t1, t2), Math.min(t3, t4));
+      const tmax = Math.min(Math.max(t1, t2), Math.max(t3, t4));
+
+      if (tmax >= 0 && tmin <= tmax && tmin < dist - 0.3 && tmax > 0.3) {
+        return false; // Portas fechadas bloqueiam a linha de tiro!
+      }
+    }
+  }
+
+  return true;
+}
+
 function fireActiveWeapon() {
   if (isPlayerDead || !equippedWeaponId) return;
 
@@ -2159,11 +2385,14 @@ function fireActiveWeapon() {
         checkObj = checkObj.parent;
       }
       const enemyId = checkObj ? checkObj.userData.enemyId : null;
-      hitEnemy = aliveEnemies.find(e => e.id === enemyId);
-      hitPoint = enemyHits[0].point;
+      const candidateEnemy = aliveEnemies.find(e => e.id === enemyId);
+      if (candidateEnemy && hasLineOfSight(shootOrigin, enemyHits[0].point)) {
+        hitEnemy = candidateEnemy;
+        hitPoint = enemyHits[0].point;
+      }
     }
 
-    // Fallback de detecção por cone de mira (para garantir acerto perfeito em combate)
+    // Fallback de detecção por cone de mira (exige linha de visão direta sem obstáculos)
     if (!hitEnemy) {
       let closestDist = maxShootDist;
       for (const enemy of aliveEnemies) {
@@ -2175,9 +2404,12 @@ function fireActiveWeapon() {
           const dot = enemyDir.dot(shootDir);
           const angleThreshold = enemy.isBoss ? 0.72 : 0.84; // ~35 a 45 graus
           if (dot > angleThreshold) {
-            hitEnemy = enemy;
-            closestDist = dist;
-            hitPoint = enemy.group.position.clone().add(new THREE.Vector3(0, 0.8, 0));
+            const enemyTargetPos = enemy.group.position.clone().add(new THREE.Vector3(0, 0.8, 0));
+            if (hasLineOfSight(shootOrigin, enemyTargetPos)) {
+              hitEnemy = enemy;
+              closestDist = dist;
+              hitPoint = enemyTargetPos;
+            }
           }
         }
       }
@@ -3256,6 +3488,16 @@ function updateMobileControlsVisibility() {
     }
   }
 
+  // Oculta o botão de controles touch no menu principal do PC, mostrando apenas no celular (mobile real)
+  if (btnToggleMobileMode) {
+    const isRealMobile = checkIsMobileDevice();
+    if (isRealMobile) {
+      btnToggleMobileMode.style.display = '';
+    } else {
+      btnToggleMobileMode.style.display = 'none';
+    }
+  }
+
   if (mobileModeTag) {
     const isAutoDetected = checkIsMobileDevice();
     mobileModeTag.textContent = forceMobileMode ? 'FORÇADO (ON)' : (isAutoDetected ? 'AUTO (DETECTADO)' : 'DESATIVADO');
@@ -3263,6 +3505,9 @@ function updateMobileControlsVisibility() {
     mobileModeTag.style.color = forceMobileMode ? '#38bdf8' : (isAutoDetected ? '#34d399' : '#94a3b8');
   }
 }
+
+// Executa na inicialização para ocultar o botão no PC imediatamente
+updateMobileControlsVisibility();
 
 // Joystick Analógico Virtual
 let joystickTouchId = null;
@@ -4104,7 +4349,19 @@ function resetGameState() {
     });
   }
 
-  // 2. Limpa todas as partículas 3D de sangue do cenário
+  // 2. Limpa todas as partículas 3D de sangue e marcações do chefe/mira
+  if (typeof aimImpactDotMesh !== 'undefined' && aimImpactDotMesh) {
+    aimImpactDotMesh.visible = false;
+  }
+  if (typeof activeBossProjectiles !== 'undefined') {
+    activeBossProjectiles.forEach(p => scene.remove(p.mesh));
+    activeBossProjectiles.length = 0;
+  }
+  if (typeof activeBossShockwaves !== 'undefined') {
+    activeBossShockwaves.forEach(s => scene.remove(s.mesh));
+    activeBossShockwaves.length = 0;
+  }
+
   if (typeof bloodParticlesPool !== 'undefined' && typeof bloodInstancedMesh !== 'undefined') {
     for (let i = 0; i < MAX_BLOOD_PARTICLES; i++) {
       const p = bloodParticlesPool[i];
@@ -4508,8 +4765,9 @@ function animate() {
     }
   }
 
-  // Atualização das partículas de sangue 3D
+  // Atualização das partículas de sangue 3D e ataques do chefe
   updateBloodParticles(delta);
+  updateBossAttacks(delta);
 
   // --- IA E ATUALIZAÇÃO DOS INIMIGOS E BOSS ---
   const currentRoomId = getRoomIdAtPosition(playerGroup.position.x, playerGroup.position.z);
@@ -4572,14 +4830,14 @@ function animate() {
 
     const distToPlayer = enemy.group.position.distanceTo(playerGroup.position);
 
-    // Checa se o inimigo foi ativado (Aggro estrito por quarto / porta aberta)
+    // Checa se o inimigo foi ativado (Aggro estrito apenas com porta aberta ou quando sofre dano)
     const doorNumber = enemy.targetRoom ? enemy.targetRoom.replace('q', '') : null;
     const roomDoor = doorNumber ? interactiveDoors.find(d => d.roomNumber === doorNumber) : null;
     const isDoorOpen = roomDoor ? roomDoor.isOpen : false;
     const enemyCurrentRoom = getRoomIdAtPosition(enemy.group.position.x, enemy.group.position.z);
     const isInSameRoom = (currentRoomId === enemy.targetRoom || (enemyCurrentRoom !== 'corridor' && currentRoomId === enemyCurrentRoom));
 
-    if (isInSameRoom || (isDoorOpen && distToPlayer < 14.0)) {
+    if ((isInSameRoom && isDoorOpen) || (isDoorOpen && distToPlayer < 14.0) || enemy.hp < enemy.maxHp) {
       enemy.isAggro = true;
       enemy.hasMoved = true;
     }
@@ -4641,6 +4899,30 @@ function animate() {
       const toPlayer = playerGroup.position.clone().sub(enemy.group.position);
       toPlayer.y = 0;
       const realDistToPlayer = toPlayer.length();
+
+      // Se for o Chefe, gerencia cooldowns e executa ataques especiais (Orbe Corrosivo e Onda de Choque)
+      if (enemy.isBoss) {
+        if (typeof enemy.rangedCooldown === 'undefined') enemy.rangedCooldown = 3.5;
+        if (typeof enemy.shockwaveCooldown === 'undefined') enemy.shockwaveCooldown = 7.0;
+
+        if (enemy.rangedCooldown > 0) enemy.rangedCooldown -= delta;
+        if (enemy.shockwaveCooldown > 0) enemy.shockwaveCooldown -= delta;
+
+        // Ataque Especial 1: Onda de Choque (Requer PULO para esquivar)
+        if (enemy.shockwaveCooldown <= 0 && enemy.attackCooldown <= 0 && realDistToPlayer >= 2.0 && realDistToPlayer <= 11.0) {
+          enemy.shockwaveCooldown = Math.random() * 3.0 + 8.0;
+          enemy.attackCooldown = 1.8;
+          playEnemyAnim(enemy, 'attack', 0.1);
+          spawnBossShockwave(enemy);
+        }
+        // Ataque Especial 2: Orbe Corrosivo (Ataque de Longe)
+        else if (enemy.rangedCooldown <= 0 && enemy.attackCooldown <= 0 && realDistToPlayer >= 3.5 && realDistToPlayer <= 15.0) {
+          enemy.rangedCooldown = Math.random() * 2.0 + 4.5;
+          enemy.attackCooldown = 1.5;
+          playEnemyAnim(enemy, 'attack', 0.1);
+          spawnBossProjectile(enemy);
+        }
+      }
 
       if (distTarget > 0.05) {
         // Rotação em direção ao alvo de navegação ou ao jogador
@@ -4805,8 +5087,8 @@ function animate() {
 
   const inputVector = new THREE.Vector3();
 
-  // Bloqueia controles se o jogo ainda não começou ou está pausado
-  if (isGameStarted && !isGamePaused) {
+  // Bloqueia controles se o jogo ainda não começou, está pausado ou o jogador faleceu
+  if (isGameStarted && !isGamePaused && !isPlayerDead) {
     if (keys.w) inputVector.add(forward);
     if (keys.s) inputVector.sub(forward);
     if (keys.a) inputVector.sub(right);
@@ -4984,7 +5266,11 @@ function animate() {
 
   const isMoving = inputVector.lengthSq() > 0;
 
-  if (isAiming) {
+  if (isPlayerDead) {
+    inputVector.set(0, 0, 0);
+    velocity.x = 0;
+    velocity.z = 0;
+  } else if (isAiming) {
     // Se estiver se movendo, gira para a direção da locomoção; se parado na mira, gira 360° para o centro da câmera/retículo
     const targetAngle = isMoving ? Math.atan2(inputVector.x, inputVector.z) : Math.atan2(forward.x, forward.z);
     let angleDiff = targetAngle - playerRotation;
@@ -5544,7 +5830,57 @@ function handleGamepadMenuNavigation(gp) {
   }
 }
 
-// Acende a luz do corredor para o menu inicial
+// --- SISTEMA DE PWA (PROGRESSIVE WEB APP) & TELA CHEIA (FULLSCREEN) ---
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      console.log('PWA Service Worker registrado com sucesso:', reg.scope);
+    }).catch((err) => {
+      console.warn('Falha ao registrar PWA Service Worker:', err);
+    });
+  });
+}
+
+let deferredPwaInstallPrompt = null;
+const btnPwaInstall = document.getElementById('btn-pwa-install');
+const btnToggleFullscreen = document.getElementById('btn-toggle-fullscreen');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPwaInstallPrompt = e;
+  if (btnPwaInstall) {
+    btnPwaInstall.classList.remove('hidden');
+  }
+});
+
+if (btnPwaInstall) {
+  btnPwaInstall.addEventListener('click', async () => {
+    if (deferredPwaInstallPrompt) {
+      deferredPwaInstallPrompt.prompt();
+      const { outcome } = await deferredPwaInstallPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('Usuário aceitou a instalação do PWA');
+      }
+      deferredPwaInstallPrompt = null;
+      btnPwaInstall.classList.add('hidden');
+    }
+  });
+}
+
+if (btnToggleFullscreen) {
+  btnToggleFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) docEl.requestFullscreen();
+      else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+  });
+}
+
+// Acende a luz do corredor para o menu inicial e inicia o loop de animação
 toggleRoomEnvironmentLight('corridor', true);
 animate();
 
