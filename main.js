@@ -2362,12 +2362,83 @@ function hasLineOfSight(fromPos, toPos) {
   return true;
 }
 
-let lastShotTime = 0;
-function fireActiveWeapon() {
-  if (isPlayerDead || !equippedWeaponId) return;
+// --- SISTEMA DE MIRA AUTOMÁTICA (AUTO-AIM) INTELIGENTE ---
+function findClosestEnemyForAutoAim(maxDistance = 25.0) {
+  const alive = activeEnemies.filter(e => !e.isDead && e.group);
+  if (alive.length === 0) return null;
 
-  // Exige que o jogador esteja armando/mirando (com LT ou Botão Direito) para disparar
-  if (!isAiming) {
+  const playerPos = playerGroup.position;
+  let closestEnemy = null;
+  let minScore = Infinity;
+
+  for (const enemy of alive) {
+    const enemyPos = enemy.group.position;
+    const dist = playerPos.distanceTo(enemyPos);
+    if (dist > maxDistance) continue;
+
+    // Checa se há colisão direta com paredes entre o jogador e o zumbi
+    const toEnemyDir = enemyPos.clone().sub(playerPos);
+    toEnemyDir.y = 0;
+    const len = toEnemyDir.length();
+    if (len < 0.05) continue;
+    toEnemyDir.normalize();
+
+    const eyeOrigin = playerPos.clone().add(new THREE.Vector3(0, 0.9, 0));
+    const losRay = new THREE.Raycaster(eyeOrigin, toEnemyDir, 0.1, len);
+    const wallBlocks = wallsGroup ? losRay.intersectObjects(wallsGroup.children, true) : [];
+    const hasWall = wallBlocks.length > 0 && wallBlocks[0].distance < (len - 0.6);
+
+    // Prioriza alvos com linha de visão direta
+    const score = dist + (hasWall ? 30.0 : 0);
+    if (score < minScore) {
+      minScore = score;
+      closestEnemy = enemy;
+    }
+  }
+
+  return closestEnemy;
+}
+
+function applyAutoAimToTarget(targetEnemy) {
+  if (!targetEnemy || !targetEnemy.group) return false;
+  const toEnemy = targetEnemy.group.position.clone().sub(playerGroup.position);
+  toEnemy.y = 0;
+  if (toEnemy.lengthSq() > 0.01) {
+    toEnemy.normalize();
+    playerRotation = Math.atan2(toEnemy.x, toEnemy.z);
+    playerGroup.rotation.y = playerRotation;
+    return true;
+  }
+  return false;
+}
+
+let lastShotTime = 0;
+function fireActiveWeapon(forceAutoAim = false) {
+  if (isPlayerDead) return;
+
+  const isMobile = checkIsMobileDevice() || forceMobileMode || forceAutoAim;
+
+  // No mobile, se o jogador tiver arma no inventário mas não estiver empunhada, equipa na hora
+  if (!equippedWeaponId && isMobile) {
+    if (weaponInventory['revolver'] && weaponInventory['revolver'].acquired) {
+      equipWeapon('revolver');
+    } else if (weaponInventory['shotgun'] && weaponInventory['shotgun'].acquired) {
+      equipWeapon('shotgun');
+    }
+  }
+
+  if (!equippedWeaponId) return;
+
+  // No mobile ou sob forceAutoAim, trava a mira no alvo mais próximo e prossegue sem bloquear
+  if (isMobile) {
+    touchAiming = true;
+    isAiming = true;
+    const target = findClosestEnemyForAutoAim(25.0);
+    if (target) {
+      applyAutoAimToTarget(target);
+    }
+  } else if (!isAiming) {
+    // No PC com teclado: exige que o jogador esteja armando/mirando (com LT ou Botão Direito)
     if (interactionPrompt) interactionPrompt.classList.remove('hidden');
     if (promptText) promptText.textContent = 'Segure [LT] ou Botão Direito do mouse para mirar antes de atirar! 🎯';
     setTimeout(() => {
@@ -3773,27 +3844,83 @@ if (touchLookZone) {
   window.addEventListener('touchcancel', endLookTouch, { passive: true });
 }
 
-// Botões de Ação Touch
+// Botões de Ação Touch com Mira Automática Integrada
 let shootIntervalId = null;
+let isShootTouchHolding = false;
+let mobileAimCooldownTimer = null;
+
+function triggerMobileShoot() {
+  if (isPlayerDead || !isGameStarted || isGamePaused) return;
+
+  if (!equippedWeaponId) {
+    if (weaponInventory['revolver'] && weaponInventory['revolver'].acquired) {
+      equipWeapon('revolver');
+    } else if (weaponInventory['shotgun'] && weaponInventory['shotgun'].acquired) {
+      equipWeapon('shotgun');
+    } else {
+      if (interactionPrompt) interactionPrompt.classList.remove('hidden');
+      if (promptText) promptText.textContent = 'Encontre uma arma primeiro! Procure nos quartos 🔫';
+      setTimeout(() => {
+        if (promptText && promptText.textContent.includes('Encontre uma arma')) {
+          if (interactionPrompt) interactionPrompt.classList.add('hidden');
+        }
+      }, 1800);
+      return;
+    }
+  }
+
+  // 1. Mira automática inteligente no zumbi mais próximo
+  const target = findClosestEnemyForAutoAim(25.0);
+  if (target) {
+    applyAutoAimToTarget(target);
+  }
+
+  // 2. Garante postura armada
+  touchAiming = true;
+  isAiming = true;
+
+  // 3. Dispara
+  fireActiveWeapon(true);
+
+  // 4. Temporizador suave para retorno de postura armada após soltar o tiro
+  if (mobileAimCooldownTimer) clearTimeout(mobileAimCooldownTimer);
+  mobileAimCooldownTimer = setTimeout(() => {
+    if (!isShootTouchHolding) {
+      touchAiming = false;
+    }
+  }, 750);
+}
 
 if (btnTouchShoot) {
   btnTouchShoot.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    fireActiveWeapon();
+    isShootTouchHolding = true;
+    triggerMobileShoot();
+
     if (!shootIntervalId) {
+      const fireRate = equippedWeaponId === 'shotgun' ? 680 : 270;
       shootIntervalId = setInterval(() => {
-        if (isGameStarted && !isGamePaused && !isPlayerDead) fireActiveWeapon();
-      }, 320);
+        if (isGameStarted && !isGamePaused && !isPlayerDead && isShootTouchHolding) {
+          triggerMobileShoot();
+        }
+      }, fireRate);
     }
   }, { passive: false });
 
   const stopShoot = (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    isShootTouchHolding = false;
     if (shootIntervalId) {
       clearInterval(shootIntervalId);
       shootIntervalId = null;
     }
+    setTimeout(() => {
+      if (!isShootTouchHolding) {
+        touchAiming = false;
+      }
+    }, 450);
   };
+
   btnTouchShoot.addEventListener('touchend', stopShoot, { passive: false });
   btnTouchShoot.addEventListener('touchcancel', stopShoot, { passive: false });
 }
@@ -3803,6 +3930,8 @@ if (btnTouchAim) {
     e.preventDefault();
     touchAiming = !touchAiming;
     if (touchAiming) {
+      const target = findClosestEnemyForAutoAim(25.0);
+      if (target) applyAutoAimToTarget(target);
       btnTouchAim.classList.add('aim-active');
     } else {
       btnTouchAim.classList.remove('aim-active');

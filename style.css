@@ -2197,24 +2197,33 @@ body, html {
   box-shadow: 0 0 20px rgba(34, 197, 94, 0.8) !important;
 }
 
-/* Botão de Atirar (Destaque Vermelho) */
+/* Botão de Atirar (Destaque Vermelho com Auto-Aim) */
 .mobile-btn-shoot {
-  width: 76px;
-  height: 76px;
-  background: radial-gradient(circle, #ef4444 0%, #991b1b 100%);
+  width: 82px;
+  height: 82px;
+  background: radial-gradient(circle at 35% 35%, #f87171 0%, #dc2626 55%, #7f1d1d 100%);
   border-color: #fca5a5;
-  box-shadow: 0 0 22px rgba(239, 68, 68, 0.7);
+  border-width: 2.5px;
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.75);
   font-weight: 800;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.mobile-btn-shoot:active {
+  transform: scale(0.92);
+  box-shadow: 0 0 32px rgba(239, 68, 68, 0.95);
+  border-color: #fef08a;
 }
 
 .mobile-btn-shoot .btn-icon {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
 }
 
 .mobile-btn-shoot .btn-label {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.5px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 /* Botão de Mirar (Roxo / Azul) */
