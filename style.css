@@ -134,18 +134,8 @@ body, html {
   font-weight: 400;
 }
 
-/* Controls & Telemetry Panel (Right Side) */
 .hud-controls-panel {
-  pointer-events: auto;
-  position: absolute;
-  top: 24px;
-  right: 24px;
-  width: 280px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  animation: slideInRight 0.4s ease-out;
+  display: none !important;
 }
 
 @keyframes slideInRight {
