@@ -10,7 +10,7 @@
   "theme_color": "#090d16",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23090d16'/><path d='M256 90 L380 400 L256 320 L132 400 Z' fill='%23ef4444'/><circle cx='256' cy='230' r='50' fill='%23facc15'/></svg>",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23090d16'/><path d='M120 420 L120 140 L392 140 L392 420 Z' fill='%231e293b' stroke='%2338bdf8' stroke-width='12'/><path d='M200 420 L200 320 L312 320 L312 420 Z' fill='%230f172a' stroke='%2338bdf8' stroke-width='8'/><rect x='160' y='180' width='50' height='50' rx='6' fill='%23facc15'/><rect x='302' y='180' width='50' height='50' rx='6' fill='%23facc15'/><rect x='160' y='250' width='50' height='50' rx='6' fill='%23ef4444'/><rect x='302' y='250' width='50' height='50' rx='6' fill='%23facc15'/><text x='256' y='105' font-family='sans-serif' font-size='64' font-weight='bold' fill='%23ef4444' text-anchor='middle'>☣️</text></svg>",
       "sizes": "192x192 512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
