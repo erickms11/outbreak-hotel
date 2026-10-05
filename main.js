@@ -296,14 +296,14 @@ function playBossRoarSound() {
 }
 
 // --- SISTEMA DE ILUMINAÇÃO GERAL E POR AMBIENTE ---
-const ambientLight = new THREE.AmbientLight(0x080d1a, 0.008);
+const ambientLight = new THREE.AmbientLight(0x1e293b, 0.22);
 scene.add(ambientLight);
 
-const hemiLight = new THREE.HemisphereLight(0x161f30, 0x01040f, 0.014);
+const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.15);
 hemiLight.position.set(0, 20, 0);
 scene.add(hemiLight);
 
-const dirLight = new THREE.DirectionalLight(0xfff5ea, 0.02);
+const dirLight = new THREE.DirectionalLight(0xfff5ea, 0.18);
 dirLight.position.set(15, 22, 12);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.width = 2048;
@@ -1132,6 +1132,11 @@ function updatePlayerHealthUI() {
   if (medkitBtn) {
     medkitBtn.style.opacity = (medkits > 0 && playerHealth < 100) ? '1' : '0.55';
   }
+
+  const permHud = document.getElementById('permanent-weapon-hud');
+  if (permHud && (!isGameStarted || isPlayerDead)) {
+    permHud.classList.add('hidden');
+  }
 }
 
 function damagePlayer(amount, enemyName = 'Criatura') {
@@ -1161,7 +1166,6 @@ function damagePlayer(amount, enemyName = 'Criatura') {
   if (playerHealth <= 0) {
     isPlayerDead = true;
     velocity.set(0, 0, 0);
-    inputVector.set(0, 0, 0);
     keys.w = keys.a = keys.s = keys.d = keys.space = keys.shift = false;
     touchMoveX = 0;
     touchMoveY = 0;
@@ -1171,12 +1175,16 @@ function damagePlayer(amount, enemyName = 'Criatura') {
     playZombieDeathSound(false);
     playPlayerAnim('death', 0.2);
     stopGameplayBGM();
-    // Aguarda 5 segundos para a animação de morte completa do personagem antes do Game Over
+
+    const permHud = document.getElementById('permanent-weapon-hud');
+    if (permHud) permHud.classList.add('hidden');
+
+    // Aguarda 2.5 segundos para a animação de morte completa do personagem antes do Game Over
     setTimeout(() => {
       const gameOverModal = document.getElementById('game-over-modal');
       if (gameOverModal) gameOverModal.classList.remove('hidden');
       playMenuBGM();
-    }, 5000);
+    }, 2500);
   }
 }
 
@@ -1433,9 +1441,10 @@ function updateWeaponsUI() {
 
   // Atualização do Mostrador Permanente Externo
   if (permHud) {
+    const hiddenClass = (!isGameStarted || isPlayerDead) ? 'hidden' : '';
     if (equippedWeaponId === 'revolver') {
       const isEmpty = wRev.loadedAmmo === 0;
-      permHud.className = `permanent-weapon-hud glass-panel weapon-revolver-active ${isEmpty ? 'ammo-empty' : ''}`;
+      permHud.className = `permanent-weapon-hud glass-panel weapon-revolver-active ${isEmpty ? 'ammo-empty' : ''} ${hiddenClass}`.trim();
       if (permIcon) permIcon.textContent = '🔫';
       if (permStatus) permStatus.textContent = isEmpty ? 'Pente Vazio (R / [RB])' : (isAiming ? 'Mirando / Pronta ([RT])' : 'Armada (Segure [LT] / RMB)');
       if (permName) permName.textContent = 'Magnum .357';
@@ -1444,7 +1453,7 @@ function updateWeaponsUI() {
       if (permAmmoLabel) permAmmoLabel.textContent = isEmpty ? 'Pressione R / [RB] p/ Recarregar' : '[LT]: Mirar • [RT]: Atirar • [RB]: Recarregar';
     } else if (equippedWeaponId === 'shotgun') {
       const isEmpty = wSht.loadedAmmo === 0;
-      permHud.className = `permanent-weapon-hud glass-panel weapon-shotgun-active ${isEmpty ? 'ammo-empty' : ''}`;
+      permHud.className = `permanent-weapon-hud glass-panel weapon-shotgun-active ${isEmpty ? 'ammo-empty' : ''} ${hiddenClass}`.trim();
       if (permIcon) permIcon.textContent = '💥';
       if (permStatus) permStatus.textContent = isEmpty ? 'Pente Vazio (R / [RB])' : (isAiming ? 'Mirando / Pronta ([RT])' : 'Armada (Segure [LT] / RMB)');
       if (permName) permName.textContent = 'Shotgun 12G';
@@ -1452,7 +1461,7 @@ function updateWeaponsUI() {
       if (permAmmoRes) permAmmoRes.textContent = `${wSht.reserveAmmo}`;
       if (permAmmoLabel) permAmmoLabel.textContent = isEmpty ? 'Pressione R / [RB] p/ Recarregar' : '[LT]: Mirar • [RT]: Atirar • [RB]: Recarregar';
     } else {
-      permHud.className = 'permanent-weapon-hud glass-panel weapon-unarmed';
+      permHud.className = `permanent-weapon-hud glass-panel weapon-unarmed ${hiddenClass}`.trim();
       if (permIcon) permIcon.textContent = '🖐️';
       if (permStatus) permStatus.textContent = 'Modo Desarmado';
       if (permName) permName.textContent = 'Mãos Livres';
@@ -2811,6 +2820,96 @@ let jakeActions = {};
 let janeActions = {};
 let currentWeaponStance = 'unarmed'; // 'unarmed', 'pistol', 'shotgun'
 
+// --- SISTEMA DE SELEÇÃO DE TRAJES (OUTFITS) ---
+const characterOutfits = {
+  jake: parseInt(localStorage.getItem('outbreak_jake_outfit') || '1', 10),
+  jane: parseInt(localStorage.getItem('outbreak_jane_outfit') || '1', 10)
+};
+
+const outfitTextureCache = {};
+
+function updateOutfitUI() {
+  const activeChar = selectedCharacter || 'jake';
+  const labelEl = document.getElementById('outfit-character-label');
+  if (labelEl) {
+    labelEl.textContent = activeChar.toUpperCase();
+    labelEl.style.color = (activeChar === 'jane') ? '#ec4899' : '#ef4444';
+  }
+
+  const currentOutfit = characterOutfits[activeChar] || 1;
+  const outfitBtns = document.querySelectorAll('.btn-outfit-select');
+  outfitBtns.forEach(btn => {
+    const num = parseInt(btn.getAttribute('data-outfit') || '1', 10);
+    if (num === currentOutfit) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
+function applyCharacterOutfit(charKey, outfitNum) {
+  if (outfitNum < 1 || outfitNum > 4) outfitNum = 1;
+  characterOutfits[charKey] = outfitNum;
+  try {
+    localStorage.setItem(`outbreak_${charKey}_outfit`, outfitNum.toString());
+  } catch (e) {}
+
+  updateOutfitUI();
+
+  const modelInstance = (charKey === 'jane') ? janeModelInstance : jakeModelInstance;
+  if (!modelInstance) return;
+
+  const applyTextureToModel = (tex) => {
+    modelInstance.traverse((child) => {
+      if (child.isMesh || child.isSkinnedMesh) {
+        const name = (child.name || '').toLowerCase();
+        if (name.includes('weapon') || name.includes('gun') || name.includes('pistol') || name.includes('shotgun')) return;
+
+        if (child.material) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach(mat => {
+            mat.map = tex;
+            mat.needsUpdate = true;
+          });
+        }
+      }
+    });
+  };
+
+  const cacheKey = `${charKey}_${outfitNum}`;
+  if (outfitTextureCache[cacheKey]) {
+    applyTextureToModel(outfitTextureCache[cacheKey]);
+    return;
+  }
+
+  const texturePath = `assets/models/${charKey}/outfit_${outfitNum}.png`;
+  const loader = new THREE.TextureLoader();
+
+  loader.load(
+    texturePath,
+    (loadedTexture) => {
+      loadedTexture.flipY = true; // No FBX, o mapeamento UV padrão requer flipY = true
+      if (THREE.SRGBColorSpace) loadedTexture.colorSpace = THREE.SRGBColorSpace;
+      outfitTextureCache[cacheKey] = loadedTexture;
+      applyTextureToModel(loadedTexture);
+      console.log(`[Outfit] ${charKey.toUpperCase()} - Traje ${outfitNum} carregado com sucesso.`);
+    },
+    undefined,
+    (err) => {
+      console.warn(`[Outfit] ${texturePath} ainda não adicionado.`);
+      // Se for Jane e outfit 1, carrega a textura original bd97ead0... caso outfit_1.png falhe
+      if (charKey === 'jane' && outfitNum === 1) {
+        loader.load('assets/models/jane/bd97ead0_7a82_44af_8d0b_80c552157a6d.png', (origTex) => {
+          origTex.flipY = true;
+          if (THREE.SRGBColorSpace) origTex.colorSpace = THREE.SRGBColorSpace;
+          applyTextureToModel(origTex);
+        });
+      }
+    }
+  );
+}
+
 function updateActiveCharacterModel() {
   const activeChar = selectedCharacter || 'jake';
 
@@ -3137,6 +3236,10 @@ assetManager.manager.onLoad = () => {
 
   // Atualiza visibilidade conforme seleção atual
   updateActiveCharacterModel();
+
+  // Aplica as roupas configuradas para os personagens
+  applyCharacterOutfit('jake', characterOutfits.jake);
+  applyCharacterOutfit('jane', characterOutfits.jane);
 
   // Garante que os personagens comecem desarmados
   equipWeapon(null);
@@ -4197,6 +4300,9 @@ function startTestRoomMode() {
   const pauseModal = document.getElementById('pause-modal');
   if (pauseModal) pauseModal.classList.add('hidden');
 
+  const permHud = document.getElementById('permanent-weapon-hud');
+  if (permHud) permHud.classList.remove('hidden');
+
   updateActiveCharacterModel();
   updateInventoryUI();
   updateWeaponsUI();
@@ -4223,6 +4329,9 @@ function exitTestRoomMode() {
   isGameStarted = false;
   isGamePaused = false;
 
+  const permHud = document.getElementById('permanent-weapon-hud');
+  if (permHud) permHud.classList.add('hidden');
+
   const startModal = document.getElementById('start-menu-modal');
   if (startModal) {
     startModal.classList.remove('hidden');
@@ -4241,7 +4350,7 @@ function startGame() {
   if (isGameStarted) return;
   isTestRoomMode = false;
   isGameStarted = true;
-  toggleRoomEnvironmentLight('corridor', false);
+  toggleRoomEnvironmentLight('corridor', true);
 
   try {
     if (screen.orientation && screen.orientation.lock) {
@@ -4266,6 +4375,9 @@ function startGame() {
   const startModal = document.getElementById('start-menu-modal');
   if (startModal) startModal.classList.add('hidden');
   playVictorySound();
+
+  const permHud = document.getElementById('permanent-weapon-hud');
+  if (permHud) permHud.classList.remove('hidden');
 
   // Garante que o jogador começa desarmado no início da campanha
   equipWeapon(null);
@@ -4322,6 +4434,7 @@ if (btnSelectJake) {
     selectedCharacter = 'jake';
     updateCharSelectionUI();
     updateActiveCharacterModel();
+    updateOutfitUI();
   });
 }
 if (btnSelectJane) {
@@ -4329,8 +4442,19 @@ if (btnSelectJane) {
     selectedCharacter = 'jane';
     updateCharSelectionUI();
     updateActiveCharacterModel();
+    updateOutfitUI();
   });
 }
+
+// Configuração dos Botões de Trajes (Outfits)
+const outfitButtons = document.querySelectorAll('.btn-outfit-select');
+outfitButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const outfitNum = parseInt(btn.getAttribute('data-outfit') || '1', 10);
+    applyCharacterOutfit(selectedCharacter || 'jake', outfitNum);
+  });
+});
+updateOutfitUI();
 
 const btnToggleHud = document.getElementById('btn-toggle-hud');
 const floatingHudToggle = document.getElementById('floating-hud-toggle');
@@ -4370,6 +4494,9 @@ if (btnGameOverRestart) {
     orbitControls.autoRotate = true;
     orbitControls.autoRotateSpeed = 1.0;
     orbitControls.update();
+
+    const permHud = document.getElementById('permanent-weapon-hud');
+    if (permHud) permHud.classList.add('hidden');
 
     const startModal = document.getElementById('start-menu-modal');
     if (startModal) {
@@ -4758,32 +4885,33 @@ function resetGameState() {
     fogObj.fogMat.opacity = 0.96; fogObj.barrierMat.opacity = 0.95; fogObj.group.visible = true;
   }
 
-  // 8. Desliga Luzes dos Quartos e Reseta Interruptores
+  // 8. Configura Iluminação Inicial (Corredor Aceso por Padrão)
   corridorFlickerBugActive = false;
   corridorFlickerTimer = 0;
   corridorNextFlickerTime = 5.0 + Math.random() * 6.0;
 
   for (const envId in roomEnvironments) {
     const env = roomEnvironments[envId];
-    env.isLit = false;
-    if (env.rocker) env.rocker.rotation.x = 0.22;
+    env.isLit = (envId === 'corridor');
+    if (env.rocker) env.rocker.rotation.x = env.isLit ? -0.22 : 0.22;
     if (env.ledMat) {
-      env.ledMat.color.setHex(0xef4444);
-      env.ledMat.emissive.setHex(0xef4444);
+      const col = env.isLit ? 0x22c55e : 0xef4444;
+      env.ledMat.color.setHex(col);
+      env.ledMat.emissive.setHex(col);
     }
     if (env.ledLight) {
-      env.ledLight.color.setHex(0xef4444);
-      env.ledLight.intensity = 1.2;
+      env.ledLight.color.setHex(env.isLit ? 0x22c55e : 0xef4444);
+      env.ledLight.intensity = env.isLit ? 0.3 : 1.2;
     }
     if (env.holoMat) {
-      env.holoMat.color.setHex(0xf59e0b);
+      env.holoMat.color.setHex(env.isLit ? env.baseColor : 0xf59e0b);
     }
     for (const lightObj of env.lights) {
-      lightObj.intensity = 0.0;
+      lightObj.intensity = env.isLit ? (lightObj.userData.maxIntensity || 8.5) : 0.0;
     }
     if (env.lampMats) {
       for (const m of env.lampMats) {
-        m.emissiveIntensity = 0.0;
+        m.emissiveIntensity = env.isLit ? 2.5 : 0.0;
       }
     }
   }
@@ -4878,16 +5006,18 @@ if (btnReplay) btnReplay.addEventListener('click', () => {
   startGame();
 });
 
-btnCamera.addEventListener('click', () => {
-  isThirdPerson = !isThirdPerson;
-  orbitControls.enabled = !isThirdPerson;
-  if (!isThirdPerson) {
-    orbitControls.target.copy(playerGroup.position);
-    btnCamera.innerHTML = `Câmera Livre Ativa`;
-  } else {
-    btnCamera.innerHTML = `Alternar Ângulo`;
-  }
-});
+if (btnCamera) {
+  btnCamera.addEventListener('click', () => {
+    isThirdPerson = !isThirdPerson;
+    orbitControls.enabled = !isThirdPerson;
+    if (!isThirdPerson) {
+      orbitControls.target.copy(playerGroup.position);
+      btnCamera.innerHTML = `Câmera Livre Ativa`;
+    } else {
+      btnCamera.innerHTML = `Alternar Ângulo`;
+    }
+  });
+}
 
 function getRoomIdAtPosition(px, pz) {
   if (px > 100) return 'test_room';

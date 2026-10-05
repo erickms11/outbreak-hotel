@@ -41,6 +41,10 @@ body, html {
   z-index: 1;
 }
 
+.hidden {
+  display: none !important;
+}
+
 /* Glassmorphism utility */
 .glass-panel {
   background: var(--panel-bg);
@@ -437,30 +441,9 @@ body, html {
   letter-spacing: 0.02em;
 }
 
-/* --- MIRA CENTRAL (CROSSHAIR) ESTILO PORTAL GUN --- */
-#crosshair-container {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 56px;
-  height: 56px;
-  pointer-events: none;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.12s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-}
-
-#crosshair-center-dot {
-  width: 4px;
-  height: 4px;
-  background-color: #ffffff;
-  border-radius: 50%;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9), 0 0 12px rgba(255, 255, 255, 0.5);
-  z-index: 2;
-  transition: transform 0.1s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+/* --- MIRA CENTRAL (CROSSHAIR) REMOVIDA --- */
+#crosshair-container, #crosshair-center-dot {
+  display: none !important;
 }
 
 #crosshair-container.is-aiming #crosshair-center-dot {
@@ -1656,6 +1639,10 @@ body, html {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.permanent-weapon-hud.hidden {
+  display: none !important;
+}
+
 .permanent-weapon-hud:hover {
   transform: translateY(-2px);
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.7), 0 0 28px rgba(56, 189, 248, 0.25);
@@ -2504,6 +2491,71 @@ body, html {
   color: #cbd5e1;
   line-height: 1.45;
 }
+
+/* --- SELEÇÃO DE TRAJES (OUTFITS) --- */
+.outfit-selection-container {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.outfit-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  letter-spacing: 1.5px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.outfit-char-highlight {
+  color: #ef4444;
+  font-weight: 800;
+  transition: color 0.2s ease;
+}
+
+.outfit-button-group {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-outfit-select {
+  padding: 6px 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.btn-outfit-select:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-outfit-select.active {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(185, 28, 28, 0.45));
+  border-color: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.5), inset 0 0 8px rgba(239, 68, 68, 0.2);
+}
+
 
 
 

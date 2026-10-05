@@ -1,4 +1,4 @@
-const CACHE_NAME = 'outbreak-hotel-v2';
+const CACHE_NAME = 'outbreak-hotel-v6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -36,10 +36,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (!event.request.url.startsWith('http')) return;
 
-  // Estratégia Network-First para HTML, JS e CSS principais (garante que atualizações do GitHub apareçam imediatamente)
+  // Estratégia Network-First para HTML, JS e CSS principais (garante que alterações apareçam imediatamente)
   if (event.request.mode === 'navigate' || event.request.url.includes('.js') || event.request.url.includes('.html') || event.request.url.includes('.css')) {
     event.respondWith(
-      fetch(event.request).then((response) => {
+      fetch(event.request, { cache: 'no-store' }).then((response) => {
         if (response && response.status === 200) {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {

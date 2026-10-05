@@ -26,6 +26,19 @@
     <meta name="apple-mobile-web-app-title" content="Outbreak Hotel" />
     <meta name="theme-color" content="#090d16" />
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script>
+      // Desinstala Service Workers antigos para garantir carregamento imediato sem cache corrompido
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (var r of registrations) { r.unregister(); }
+        });
+        if (window.caches) {
+          caches.keys().then(function(names) {
+            for (var name of names) { caches.delete(name); }
+          });
+        }
+      }
+    </script>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
@@ -33,139 +46,6 @@
 
     <!-- UI Overlay com Glassmorphism -->
     <main id="hud-overlay">
-      <header class="hud-header glass-panel">
-        <div class="logo-group">
-          <div class="status-indicator live"></div>
-          <h1>Outbreak <span>Hotel</span></h1>
-          <span class="version-tag">Key to Survival</span>
-        </div>
-        <p class="subtitle">Encontre as Chaves Sequenciais nos Quartos • Derrote o Guardião • Escape!</p>
-      </header>
-
-      <!-- Painel de Controles e Telemetria (Oculto) -->
-      <!--
-      <aside class="hud-controls-panel glass-panel">
-        <h2 class="panel-title">Controles (WASD + Espaço)</h2>
-        <div class="keyboard-layout">
-          <div class="key-row">
-            <div class="key" id="key-w"><span>W</span></div>
-          </div>
-          <div class="key-row">
-            <div class="key" id="key-a"><span>A</span></div>
-            <div class="key" id="key-s"><span>S</span></div>
-            <div class="key" id="key-d"><span>D</span></div>
-          </div>
-          <div class="key-row space-row">
-            <div class="key key-space" id="key-space"><span>Espaço (Pular)</span></div>
-          </div>
-        </div>
-        <p class="keys-legend">WASD / 🎮 LS: Mover • <strong>[LT] / RMB: Mirar</strong> • <strong>[RT] / G: Atirar</strong> • [RB] / R: Recarregar • [B]/[Y]: Zoom • D-Pad Cima / Q: Curar • [X] / E: Interagir • Start: Pausa</p>
-
-        <div class="divider"></div>
-
-        <div class="keys-inventory-section">
-          <h3 class="panel-subtitle">Inventário de Chaves 🔑</h3>
-          <div class="keys-grid">
-            <div class="key-badge" id="key-badge-102" title="Chave do Escudo (Desbloqueia Q.102)"><span>🔒 Escudo 🛡️</span></div>
-            <div class="key-badge" id="key-badge-103" title="Chave da Espada (Desbloqueia Q.103)"><span>🔒 Espada ⚔️</span></div>
-            <div class="key-badge" id="key-badge-104" title="Chave da Águia (Desbloqueia Q.104)"><span>🔒 Águia 🦅</span></div>
-            <div class="key-badge" id="key-badge-105" title="Chave do Leão (Desbloqueia Q.105)"><span>🔒 Leão 🦁</span></div>
-            <div class="key-badge" id="key-badge-106" title="Chave do Elmo (Desbloqueia Q.106)"><span>🔒 Elmo 🪖</span></div>
-            <div class="key-badge key-master" id="key-badge-master" title="Chave Mestre de Saída"><span>🔒 Mestre 👑</span></div>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="weapons-inventory-section">
-          <h3 class="panel-subtitle">Armamento & Munição 🔫</h3>
-          <div class="weapon-status-card">
-            <div class="weapon-name-row">
-              <span id="weapon-equipped-name" class="weapon-equipped-badge unequipped">Desarmado 🖐️</span>
-              <span id="weapon-ammo-display" class="weapon-ammo-count">-- / --</span>
-            </div>
-            <div class="weapons-grid">
-              <div class="weapon-badge" id="badge-weapon-revolver" title="Revólver (Pressione 1 para equipar)"><span>🔒 Revólver 🔫</span></div>
-              <div class="weapon-badge" id="badge-weapon-shotgun" title="Shotgun (Pressione 2 para equipar)"><span>🔒 Shotgun 💥</span></div>
-            </div>
-            <div class="ammo-reserve-row">
-              <span class="ammo-type-label">📦 Revólver: <strong id="ammo-count-revolver">0</strong></span>
-              <span class="ammo-type-label">📦 Shotgun: <strong id="ammo-count-shotgun">0</strong></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="stats-group">
-          <div class="stat-item">
-            <span class="stat-label">Ambiente Atual:</span>
-            <span class="stat-value badge-room" id="stat-room">Corredor Central 🏨</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Luz do Ambiente:</span>
-            <span class="stat-value badge-light-off" id="stat-light">Apagada 🌙</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Objetivo Atual:</span>
-            <span class="stat-value font-mono" id="stat-goal" style="color: #facc15;">Entre na Suíte 101</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Posição X / Z:</span>
-            <span class="stat-value font-mono" id="stat-xz">0.00 / 0.00</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Altura Y / Vel:</span>
-            <span class="stat-value font-mono" id="stat-y-speed">1.00m • 0.0m/s</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Status Colisão:</span>
-            <span class="stat-value badge-safe" id="stat-collision">Espaço Livre</span>
-          </div>
-        </div>
-
-        <div class="action-buttons">
-          <div class="zoom-buttons-row">
-            <button id="btn-zoom-in" class="btn-action btn-zoom" title="Aproximar Câmera">
-              🔍 Zoom +
-            </button>
-            <button id="btn-zoom-out" class="btn-action btn-zoom" title="Afastar Câmera">
-              🔍 Zoom -
-            </button>
-          </div>
-          <button id="btn-toggle-light" class="btn-action">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-            </svg>
-            Luz do Quarto Atual (E)
-          </button>
-          <button id="btn-reset" class="btn-action">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-              <path d="M3 3v5h5"/>
-            </svg>
-            Resetar Posição
-          </button>
-          <button id="btn-camera" class="btn-action">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
-              <circle cx="12" cy="13" r="3"/>
-            </svg>
-            Alternar Ângulo
-          </button>
-        </div>
-      </aside>
-      -->
-
-      <!-- Retículo Central Discreto para Mira/Seleção -->
-      <div id="crosshair-container" aria-hidden="true">
-        <div id="crosshair-center-dot"></div>
-      </div>
-
-      <!-- Dica inferior -->
-      <footer class="hud-footer glass-panel">
-        <span><strong style="color: #38bdf8;">WASD / [LS]:</strong> Mover • <strong style="color: #38bdf8;">Espaço / [A]:</strong> Pular • <strong style="color: #f43f5e;">[LT] / RMB:</strong> Mirar • <strong style="color: #ef4444;">[RT] / G:</strong> Atirar • <strong style="color: #facc15;">[RB] / R:</strong> Recarregar • <strong style="color: #34d399;">[X] / E:</strong> Interagir • <strong style="color: #a855f7;">[B] / [Y]:</strong> Zoom</span>
-      </footer>
     </main>
 
     <!-- Barra de Vida do Chefe (Aparece no topo na Sala 106) -->
@@ -184,8 +64,8 @@
     <div id="screen-damage-overlay" class="screen-fx-overlay damage-overlay"></div>
     <div id="screen-heal-overlay" class="screen-fx-overlay heal-overlay"></div>
 
-    <!-- Mostrador Permanente de Vida, Arma e Munição (Sempre Visível) -->
-    <div id="permanent-weapon-hud" class="permanent-weapon-hud glass-panel">
+    <!-- Mostrador Permanente de Vida, Arma e Munição (Exibido somente ao Iniciar o Jogo) -->
+    <div id="permanent-weapon-hud" class="permanent-weapon-hud glass-panel hidden">
       <!-- Seção de Saúde do Jogador -->
       <div class="player-health-section">
         <div class="health-header-row">
@@ -327,6 +207,20 @@
                 <button id="btn-select-jane" class="btn-char-select" style="padding: 10px 20px; border: 2px solid transparent; background: rgba(255, 255, 255, 0.05); color: #94a3b8; cursor: pointer; border-radius: 8px; font-weight: bold; transition: 0.2s;">
                   👩 JANE
                 </button>
+              </div>
+
+              <!-- Seleção de Roupas / Trajes (Outfits) -->
+              <div id="outfit-selection-container" class="outfit-selection-container">
+                <div class="outfit-label-row">
+                  <span>🥋 Traje de</span>
+                  <span id="outfit-character-label" class="outfit-char-highlight">JAKE</span>:
+                </div>
+                <div class="outfit-button-group">
+                  <button type="button" class="btn-outfit-select active" data-outfit="1">Traje 1</button>
+                  <button type="button" class="btn-outfit-select" data-outfit="2">Traje 2</button>
+                  <button type="button" class="btn-outfit-select" data-outfit="3">Traje 3</button>
+                  <button type="button" class="btn-outfit-select" data-outfit="4">Traje 4</button>
+                </div>
               </div>
             </div>
 
