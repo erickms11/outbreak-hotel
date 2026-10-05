@@ -55,9 +55,8 @@ orbitControls.enabled = false;
 
 let isThirdPerson = true;
 
-// --- EFEITOS SONOROS SINTETIZADOS VIA WEB AUDIO API ---
-// Desativado temporariamente conforme feedback
-const AUDIO_ENABLED = true; // Habilitando para testar se o travamento parou
+// --- SISTEMA DE CONTROLE DE ÁUDIO GLOBAL (SOM & MUTE) ---
+let AUDIO_ENABLED = localStorage.getItem('outbreak_audio_muted') !== 'true';
 
 let globalAudioCtx = null;
 function getAudioContext() {
@@ -65,6 +64,59 @@ function getAudioContext() {
     globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
   return globalAudioCtx;
+}
+
+function updateAudioUI() {
+  const isMuted = !AUDIO_ENABLED;
+  const iconMain = document.getElementById('audio-icon-main');
+  const btnMain = document.getElementById('btn-toggle-audio-main');
+  const iconPause = document.getElementById('audio-icon-pause');
+  const btnPause = document.getElementById('btn-toggle-audio-pause');
+
+  const iconText = isMuted ? '🔇' : '🔊';
+  const labelText = isMuted ? 'Áudio Desativado (Clique para ativar 🔊)' : 'Áudio Ativado (Clique para desativar 🔇)';
+
+  if (iconMain) iconMain.textContent = iconText;
+  if (btnMain) {
+    btnMain.title = labelText;
+    btnMain.setAttribute('aria-label', labelText);
+    if (isMuted) btnMain.classList.add('audio-muted');
+    else btnMain.classList.remove('audio-muted');
+  }
+
+  if (iconPause) iconPause.textContent = iconText;
+  if (btnPause) {
+    btnPause.title = labelText;
+    btnPause.setAttribute('aria-label', labelText);
+    if (isMuted) btnPause.classList.add('audio-muted');
+    else btnPause.classList.remove('audio-muted');
+  }
+}
+
+function toggleAudioMute() {
+  AUDIO_ENABLED = !AUDIO_ENABLED;
+  try {
+    localStorage.setItem('outbreak_audio_muted', (!AUDIO_ENABLED).toString());
+  } catch (e) {}
+
+  if (!AUDIO_ENABLED) {
+    pauseBackgroundBGM();
+    if (globalAudioCtx && globalAudioCtx.state === 'running') {
+      try { globalAudioCtx.suspend(); } catch (e) {}
+    }
+  } else {
+    if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+      try { globalAudioCtx.resume(); } catch (e) {}
+    }
+    if (isGameStarted && !isGamePaused) {
+      startGameplayBGM();
+    } else {
+      playMenuBGM();
+    }
+    playSwitchSound();
+  }
+
+  updateAudioUI();
 }
 
 // --- SISTEMA DE TRILHA SONORA UNIFICADA (BACKGROUND SONGS ALEATÓRIAS: MENU & GAMEPLAY) ---
@@ -167,6 +219,7 @@ function playNextGameplayBGM() { playNextBackgroundBGM(); }
 
 // --- HELPER PARA TOCAR ARQUIVOS DE ÁUDIO (.mp3, .ogg, .m4a, .wav) ---
 function playBetterAudio(key, volume = 0.5) {
+  if (!AUDIO_ENABLED) return false;
   const buffer = assetManager.getSoundBuffer(key);
   if (buffer && typeof audioListener !== 'undefined') {
     try {
@@ -5685,10 +5738,19 @@ function animate() {
   }
 
   // --- LEITURA DO CONTROLE XBOX / GAMEPAD ---
+  let gamepadMoving = false;
+  let gamepadStickMagnitude = 0;
+  let gamepadRunning = false;
+
   if (navigator.getGamepads) {
     const gamepads = navigator.getGamepads();
     const gp = activeGamepadIndex !== null ? gamepads[activeGamepadIndex] : (gamepads[0] || gamepads[1] || gamepads[2] || gamepads[3]);
     if (gp && gp.connected) {
+      if (!isGamepadConnected) {
+        isGamepadConnected = true;
+        activeGamepadIndex = gp.index;
+      }
+
       // Iniciar Jogo via Controle (Start) - O 'A' agora é lidado pelo menu navigator
       if (!isGameStarted) {
         if (isButtonJustPressed(gp, 9)) {
@@ -5702,22 +5764,34 @@ function animate() {
         const rawLY = gp.axes[1] || 0;
         const stickLX = applyAxisDeadzone(rawLX, 0.16);
         const stickLY = applyAxisDeadzone(rawLY, 0.16);
+        const stickMag = Math.hypot(stickLX, stickLY);
 
-        if (Math.abs(stickLX) > 0 || Math.abs(stickLY) > 0) {
+        if (stickMag > 0) {
+          gamepadMoving = true;
+          gamepadStickMagnitude = Math.min(1.0, stickMag);
           inputVector.addScaledVector(forward, -stickLY);
           inputVector.addScaledVector(right, stickLX);
         }
 
         // Analógico Direito: Câmera / Rotação
-        const rawRX = gp.axes[2] || 0;
-        const rawRY = gp.axes[3] || 0;
+        // Suporte para mapeamento padrão e fallback para controles bluetooth no mobile
+        let rawRX = gp.axes[2] || 0;
+        let rawRY = gp.axes[3] || 0;
+        if (Math.abs(rawRY) < 0.05 && gp.axes[5] !== undefined && Math.abs(gp.axes[5]) > 0.05) {
+          rawRY = gp.axes[5];
+        }
         const stickRX = applyAxisDeadzone(rawRX, 0.16);
         const stickRY = applyAxisDeadzone(rawRY, 0.16);
 
         if (Math.abs(stickRX) > 0 || Math.abs(stickRY) > 0) {
           if (isThirdPerson) {
-            cameraYaw -= stickRX * delta * 3.4;
-            cameraPitch = THREE.MathUtils.clamp(cameraPitch + stickRY * delta * 2.6, -0.15, 1.15);
+            // Curva suave com sensibilidade balanceada: precisão fina para mirar e giro ágil sem descontrole
+            const rxSign = Math.sign(stickRX);
+            const rySign = Math.sign(stickRY);
+            const rxSens = rxSign * Math.pow(Math.abs(stickRX), 1.35) * 2.4;
+            const rySens = rySign * Math.pow(Math.abs(stickRY), 1.35) * 2.0;
+            cameraYaw -= rxSens * delta;
+            cameraPitch = THREE.MathUtils.clamp(cameraPitch + rySens * delta, -0.15, 1.15);
           }
         }
 
@@ -5732,14 +5806,11 @@ function animate() {
           }
         }
 
-        // Gatilho Direito RT (7): Atirar
-        if (isButtonJustPressed(gp, 7)) {
-          fireActiveWeapon();
-        }
-
-        // Botão RB (5): Recarregar
-        if (isButtonJustPressed(gp, 5)) {
-          reloadActiveWeapon();
+        // Botão LB (4) ou L3 (10): Correr com controle
+        const isL3Pressed = gp.buttons[10] && (gp.buttons[10].pressed || gp.buttons[10].value > 0.5);
+        const isLBPressed = gp.buttons[4] && (gp.buttons[4].pressed || gp.buttons[4].value > 0.5);
+        if (isL3Pressed || isLBPressed) {
+          gamepadRunning = true;
         }
 
         // Gatilho Esquerdo LT (6): Armar / Mirar (Aim)
@@ -5895,20 +5966,19 @@ function animate() {
     velocity.x += inputVector.x * ACCELERATION * delta;
     velocity.z += inputVector.z * ACCELERATION * delta;
 
-    let isRunning = keys.shift || touchRunning;
+    let isRunning = keys.shift || touchRunning || gamepadRunning;
     const touchSpeedRatio = Math.sqrt(touchMoveX * touchMoveX + touchMoveY * touchMoveY);
-    if (touchSpeedRatio > 0.75) {
+    if (touchSpeedRatio > 0.85) {
       isRunning = true;
     }
-    if (isGamepadConnected && navigator.getGamepads) {
-      const gp = navigator.getGamepads()[activeGamepadIndex];
-      // Analógico esquerdo totalmente empurrado ou botão L3
-      if (gp && ((gp.buttons[10] && gp.buttons[10].pressed) || inputVector.length() > 0.85)) {
-        isRunning = true;
-      }
-    }
 
-    const currentMaxSpeed = isRunning ? RUN_SPEED : MOVE_SPEED;
+    let currentMaxSpeed = isRunning ? RUN_SPEED : MOVE_SPEED;
+    if (gamepadMoving && !isRunning) {
+      // Movimentação analógica suave e gradual com controle:
+      // Se empurrar de leve o analógico, anda devagar. Empurrando no máximo, anda a MOVE_SPEED (2.8).
+      // Ao pressionar LB ou L3 (ou Shift), dispara a correr a RUN_SPEED (4.1).
+      currentMaxSpeed = Math.max(1.2, MOVE_SPEED * gamepadStickMagnitude);
+    }
     const speed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
     if (speed > currentMaxSpeed) {
       velocity.x = (velocity.x / speed) * currentMaxSpeed;
@@ -5995,24 +6065,24 @@ function animate() {
   if (isThirdPerson && isGameStarted) {
     // Modo de Câmera Mobile
     if (isMobileDevice || forceMobileMode) {
-      if (isMobileCameraMode) {
-        // Câmera Fixa nas Costas: posiciona-se naturalmente atrás da rotação do jogador
+      if (isMobileCameraMode && !isGamepadConnected) {
+        // Câmera Fixa nas Costas: posiciona-se naturalmente atrás da rotação do jogador SOMENTE no touch puro sem controle
         const targetDist = isAiming ? 2.0 : 2.7;
         cameraDistance = THREE.MathUtils.lerp(cameraDistance, targetDist, Math.min(1.0, 8.0 * delta));
         const targetPitch = isAiming ? 0.18 : 0.22;
         cameraPitch = THREE.MathUtils.lerp(cameraPitch, targetPitch, Math.min(1.0, 8.0 * delta));
 
-        // Rotação suave para acompanhar as costas do jogador SOMENTE quando em locomoção ativa (evita giros indesejados ao parar ou interagir)
+        // Rotação suave para acompanhar as costas do jogador SOMENTE quando em locomoção ativa via touch
         if (isMoving) {
           const desiredYaw = playerRotation + Math.PI;
           let diffYaw = desiredYaw - cameraYaw;
           while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
           while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
-          const alignSpeed = 4.5;
+          const alignSpeed = 3.5;
           cameraYaw += diffYaw * Math.min(1.0, alignSpeed * delta);
         }
       } else {
-        // Câmera Livre: mantém controle do jogador via touchLookZone sem forçar ângulo
+        // Câmera Livre (PC e quando controle/gamepad estiver ativo no celular):
         const targetDist = isAiming ? 2.2 : 3.4;
         cameraDistance = THREE.MathUtils.lerp(cameraDistance, targetDist, Math.min(1.0, 8.0 * delta));
       }
@@ -6571,6 +6641,34 @@ if (btnToggleFullscreen) {
     }
   });
 }
+
+const btnToggleAudioMain = document.getElementById('btn-toggle-audio-main');
+const btnToggleAudioPause = document.getElementById('btn-toggle-audio-pause');
+const btnToggleFullscreenPause = document.getElementById('btn-toggle-fullscreen-pause');
+
+if (btnToggleAudioMain) {
+  btnToggleAudioMain.addEventListener('click', toggleAudioMute);
+}
+
+if (btnToggleAudioPause) {
+  btnToggleAudioPause.addEventListener('click', toggleAudioMute);
+}
+
+if (btnToggleFullscreenPause) {
+  btnToggleFullscreenPause.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) docEl.requestFullscreen();
+      else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+  });
+}
+
+// Inicializa estado visual dos ícones de áudio
+updateAudioUI();
 
 // Acende a luz do corredor para o menu inicial e inicia o loop de animação
 toggleRoomEnvironmentLight('corridor', true);

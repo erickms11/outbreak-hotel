@@ -225,6 +225,10 @@
 
             <!-- Barra Horizontal de Ícones Secundários (Design Clean) -->
             <div class="menu-icon-bar">
+              <button id="btn-toggle-audio-main" class="btn-menu-icon" title="Ativar/Desativar Áudio" aria-label="Alternar Áudio">
+                <span class="btn-icon" id="audio-icon-main">🔊</span>
+              </button>
+
               <button id="btn-start-test-room" class="btn-menu-icon" title="Sala de Testes (Sandbox)" aria-label="Sala de Testes">
                 <span class="btn-icon">🧪</span>
               </button>
@@ -471,6 +475,16 @@
             <button id="btn-pause-menu" class="btn-menu-secondary">
               <span class="btn-icon">🏠</span>
               <span class="btn-label">Menu Principal</span>
+            </button>
+          </div>
+
+          <!-- Barra de Ícones do Menu de Pausa (Áudio & Tela Cheia) -->
+          <div class="pause-icon-bar">
+            <button id="btn-toggle-audio-pause" class="btn-menu-icon" title="Ativar/Desativar Áudio" aria-label="Alternar Áudio">
+              <span class="btn-icon" id="audio-icon-pause">🔊</span>
+            </button>
+            <button id="btn-toggle-fullscreen-pause" class="btn-menu-icon" title="Tela Cheia (Fullscreen)" aria-label="Tela Cheia">
+              <span class="btn-icon">⛶</span>
             </button>
           </div>
 
