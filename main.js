@@ -4254,6 +4254,12 @@ function startGame() {
   isGameStarted = true;
   toggleRoomEnvironmentLight('corridor', false);
 
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
+  } catch (e) {}
+
   stopMenuBGM();
   startGameplayBGM();
 

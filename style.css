@@ -2444,6 +2444,67 @@ body, html {
   display: none !important;
 }
 
+/* --- OVERLAY PARA FORÇAR MODO PAISAGEM NO MOBILE --- */
+.rotate-device-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(9, 13, 22, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 99999;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  text-align: center;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .rotate-device-overlay {
+    display: flex !important;
+  }
+}
+
+.rotate-device-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 32px 24px;
+  max-width: 320px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 35px rgba(56, 189, 248, 0.25);
+  border-radius: 20px;
+}
+
+.phone-rotate-icon {
+  font-size: 3.5rem;
+  animation: rotatePhoneAnim 2.2s infinite ease-in-out;
+}
+
+@keyframes rotatePhoneAnim {
+  0%, 15% { transform: rotate(0deg); }
+  50%, 65% { transform: rotate(-90deg); }
+  90%, 100% { transform: rotate(0deg); }
+}
+
+.rotate-device-card h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 1px;
+}
+
+.rotate-device-card p {
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
 
 
 
