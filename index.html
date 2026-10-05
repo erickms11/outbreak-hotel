@@ -25,6 +25,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Outbreak Hotel" />
     <meta name="theme-color" content="#090d16" />
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
@@ -366,6 +367,10 @@
                 <span class="btn-icon">📜</span>
               </button>
 
+              <button id="btn-open-online" class="btn-menu-icon" title="Modo Co-op Online (2P) 🌐" aria-label="Modo Online">
+                <span class="btn-icon">🌐</span>
+              </button>
+
               <button id="btn-toggle-fullscreen" class="btn-menu-icon" title="Tela Cheia (Fullscreen)" aria-label="Tela Cheia">
                 <span class="btn-icon">⛶</span>
               </button>
@@ -381,6 +386,60 @@
           </div>
 
           <span class="start-key-hint">Pressione <strong>Espaço</strong>, <strong>Enter</strong> ou <strong>[A] no Controle</strong></span>
+        </div>
+
+        <!-- TELA ONLINE: MULTIPLAYER CO-OP (2 PLAYERS) -->
+        <div id="menu-screen-online" class="menu-screen hidden">
+          <div class="menu-header compact">
+            <div class="diff-header-icon">🌐</div>
+            <h2>MULTIPLAYER CO-OP (2 PLAYERS)</h2>
+            <p class="menu-tagline">Conexão direta WebRTC P2P (Sem Lag & Gratuito)</p>
+          </div>
+
+          <div class="online-menu-container" style="display: flex; flex-direction: column; gap: 16px; width: 100%; margin-top: 10px;">
+            <!-- Opção 1: Criar Sala (Host) -->
+            <div class="online-card glass-panel" style="padding: 16px; border-radius: 12px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.3);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <strong style="color: #38bdf8; font-size: 1.05rem;">👑 Criar Sala (Host)</strong>
+                <span id="p2p-host-role-badge" class="diff-tag-pill" style="background: rgba(56, 189, 248, 0.25); color: #38bdf8;">JAKE 👨</span>
+              </div>
+              <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Gere um código de 4 dígitos para seu amigo conectar no mesmo jogo.</p>
+              
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button id="btn-p2p-create-room" class="btn-start-game" style="flex: 1; padding: 12px 16px; font-size: 0.95rem;">
+                  <span>CRIAR SALA</span>
+                </button>
+                <div id="p2p-room-code-display" class="hidden" style="padding: 10px 18px; background: rgba(0, 0, 0, 0.5); border: 2px solid #38bdf8; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: bold; color: #38bdf8; letter-spacing: 3px;">
+                  ----
+                </div>
+              </div>
+            </div>
+
+            <!-- Opção 2: Entrar em Sala (Client) -->
+            <div class="online-card glass-panel" style="padding: 16px; border-radius: 12px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(52, 211, 153, 0.3);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <strong style="color: #34d399; font-size: 1.05rem;">🔗 Entrar em Sala (Client)</strong>
+                <span id="p2p-client-role-badge" class="diff-tag-pill" style="background: rgba(52, 211, 153, 0.25); color: #34d399;">JANE 👩</span>
+              </div>
+              <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Digite o código de 4 dígitos gerado pelo Host da sala.</p>
+
+              <div style="display: flex; gap: 10px;">
+                <input id="input-p2p-room-code" type="text" maxlength="4" placeholder="EX: 4829" style="width: 130px; text-align: center; padding: 10px; background: rgba(0,0,0,0.6); border: 1px solid rgba(52, 211, 153, 0.5); border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: bold; color: #34d399; text-transform: uppercase; letter-spacing: 2px;" />
+                <button id="btn-p2p-join-room" class="btn-start-game" style="flex: 1; padding: 12px 16px; font-size: 0.95rem; background: linear-gradient(135deg, #059669, #10b981);">
+                  <span>CONECTAR 🔗</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Caixa de Status da Conexão P2P -->
+            <div id="p2p-status-box" style="padding: 12px; border-radius: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.85rem; color: #cbd5e1; text-align: center;">
+              Status: <span id="p2p-status-text" style="color: #94a3b8; font-weight: bold;">Desconectado</span>
+            </div>
+
+            <button id="btn-back-online" class="btn-menu-back">
+              <span>VOLTAR AO MENU</span>
+            </button>
+          </div>
         </div>
 
         <!-- TELA 2: Configurações de Dificuldade -->

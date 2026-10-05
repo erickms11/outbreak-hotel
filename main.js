@@ -2329,6 +2329,10 @@ function fireActiveWeapon() {
     weapon.loadedAmmo--;
     playGunshotSound(equippedWeaponId);
 
+    if (isOnlineMultiplayer && p2pConn && p2pConn.open) {
+      p2pConn.send({ type: 'EVENT_FIRE', weaponId: equippedWeaponId });
+    }
+
     // Efeito de recuo na animação de disparo
     if (equippedWeaponId === 'revolver' && playerActions['shoot']) {
       playerActions['shoot'].reset().play();
@@ -3404,7 +3408,7 @@ let isGameStarted = false;
 let isGamePaused = false;
 
 function showMenuScreen(screenId) {
-  const screens = ['menu-screen-main', 'menu-screen-difficulty', 'menu-screen-instructions'];
+  const screens = ['menu-screen-main', 'menu-screen-difficulty', 'menu-screen-instructions', 'menu-screen-online'];
   screens.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -3761,19 +3765,329 @@ function togglePauseGame(forceState) {
   updateMobileControlsVisibility();
 }
 
+// --- SISTEMA MULTIPLAYER CO-OP ONLINE (WEBRTC P2P VIA PEERJS) ---
+let peer = null;
+let p2pConn = null;
+let isOnlineMultiplayer = false;
+let isP2pHost = false;
+let p2pRoomCode = '';
+
+// Modelo e Grupo do Parceiro 3D
+let partnerGroup = new THREE.Group();
+scene.add(partnerGroup);
+partnerGroup.visible = false;
+
+let partnerModelInstance = null;
+let partnerMixer = null;
+let partnerActions = {};
+let activePartnerAction = null;
+let partnerCharacter = 'jane';
+let partnerTargetPos = new THREE.Vector3(1.5, 1.0, 0);
+let partnerTargetYaw = Math.PI / 2;
+let partnerHealth = 100;
+let partnerEquippedWeapon = null;
+let partnerWeaponGroup = new THREE.Group();
+let partnerRevolverMesh = null;
+let partnerShotgunMesh = null;
+
+function setupPartnerMesh(charName) {
+  partnerCharacter = charName;
+  while (partnerGroup.children.length > 0) {
+    partnerGroup.remove(partnerGroup.children[0]);
+  }
+
+  const baseModel = charName === 'jane' ? janeModelInstance : jakeModelInstance;
+  if (!baseModel) return;
+
+  partnerModelInstance = SkeletonUtils.clone(baseModel);
+  partnerModelInstance.scale.set(0.018, 0.018, 0.018);
+  partnerModelInstance.position.set(0, -1.0, 0);
+  partnerModelInstance.visible = true;
+
+  let rightHand = null;
+  partnerModelInstance.traverse(c => {
+    if (c.isMesh) {
+      c.castShadow = true;
+      c.receiveShadow = true;
+    }
+    if (c.isBone && c.name && c.name.includes('RightHand')) {
+      rightHand = c;
+    }
+  });
+
+  partnerGroup.add(partnerModelInstance);
+  partnerGroup.visible = true;
+  partnerGroup.position.set(1.5, 1.0, 0);
+
+  if (assetManager) {
+    partnerMixer = new THREE.AnimationMixer(partnerModelInstance);
+    partnerActions = {};
+    const isFemale = (charName === 'jane');
+    const anims = ['idle', 'walk', 'run', 'aim', 'shoot', 'death'];
+    anims.forEach(animName => {
+      let animKey = animName;
+      if (animName === 'idle') animKey = isFemale ? 'idle_female' : 'idle_male';
+      if (animName === 'walk') animKey = isFemale ? 'walk_female' : 'walk_male';
+      if (animName === 'shoot' || animName === 'aim') animKey = 'shoot';
+      let clip = assetManager.getAnimation(animKey) || assetManager.getAnimation(animName);
+      if (clip) {
+        const clipClone = clip.clone();
+        clipClone.tracks.forEach(track => {
+          if (track && track.name) {
+            track.name = track.name.replace(/.*mixamorig/g, 'mixamorig');
+            if (track.name.includes('Hips.position')) {
+              const values = track.values;
+              const initialX = values[0] || 0;
+              const initialY = values[1] || 0;
+              const initialZ = values[2] || 0;
+              for (let i = 0; i < values.length; i += 3) {
+                values[i] = initialX;
+                if (animName !== 'death') values[i + 1] = initialY;
+                values[i + 2] = initialZ;
+              }
+            }
+          }
+        });
+        const action = partnerMixer.clipAction(clipClone);
+        if (animName === 'death' || animName === 'shoot') {
+          action.setLoop(THREE.LoopOnce);
+          action.clampWhenFinished = true;
+        }
+        partnerActions[animName] = action;
+      }
+    });
+    if (partnerActions['idle']) partnerActions['idle'].play();
+  }
+
+  partnerWeaponGroup = new THREE.Group();
+  partnerWeaponGroup.rotation.set(Math.PI / 2, Math.PI / 2, 0);
+  const PISTOL_ROT_X = THREE.MathUtils.degToRad(-70);
+  const PISTOL_ROT_Y = THREE.MathUtils.degToRad(90);
+  const PISTOL_ROT_Z = THREE.MathUtils.degToRad(180);
+
+  if (assetManager.models['pistol']) {
+    partnerRevolverMesh = assetManager.models['pistol'].clone();
+    partnerRevolverMesh.scale.set(1.25, 1.25, 1.25);
+    partnerRevolverMesh.rotation.set(PISTOL_ROT_X, PISTOL_ROT_Y, PISTOL_ROT_Z);
+    partnerRevolverMesh.position.set(15, -2, 8);
+    partnerRevolverMesh.visible = false;
+    partnerWeaponGroup.add(partnerRevolverMesh);
+  }
+
+  if (assetManager.models['shotgun']) {
+    partnerShotgunMesh = assetManager.models['shotgun'].clone();
+    partnerShotgunMesh.scale.set(0.85, 0.85, 0.85);
+    partnerShotgunMesh.rotation.set(PISTOL_ROT_X, PISTOL_ROT_Y, PISTOL_ROT_Z);
+    partnerShotgunMesh.position.set(15, -2, 8);
+    partnerShotgunMesh.visible = false;
+    partnerWeaponGroup.add(partnerShotgunMesh);
+  }
+
+  if (rightHand) rightHand.add(partnerWeaponGroup);
+}
+
+function playPartnerAnim(actionName, duration = 0.2) {
+  if (!partnerMixer || !partnerActions[actionName]) return;
+  const nextAction = partnerActions[actionName];
+  if (nextAction === activePartnerAction) return;
+
+  nextAction.reset().fadeIn(duration).play();
+  if (activePartnerAction) activePartnerAction.fadeOut(duration);
+  activePartnerAction = nextAction;
+}
+
+function updateP2pStatus(text, color = '#38bdf8') {
+  const statusElem = document.getElementById('p2p-status-text');
+  if (statusElem) {
+    statusElem.textContent = text;
+    statusElem.style.color = color;
+  }
+}
+
+function generate4DigitCode() {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+function initP2pHost() {
+  if (typeof Peer === 'undefined') {
+    updateP2pStatus('Erro: PeerJS não carregado. Verifique a conexão.', '#ef4444');
+    return;
+  }
+
+  p2pRoomCode = generate4DigitCode();
+  const peerId = 'outbreak-hotel-' + p2pRoomCode;
+
+  updateP2pStatus('Criando sala...', '#facc15');
+
+  if (peer) { try { peer.destroy(); } catch(e){} }
+
+  peer = new Peer(peerId, { debug: 1 });
+
+  peer.on('open', (id) => {
+    const codeDisplay = document.getElementById('p2p-room-code-display');
+    if (codeDisplay) {
+      codeDisplay.textContent = p2pRoomCode;
+      codeDisplay.classList.remove('hidden');
+    }
+    updateP2pStatus(`👑 Sala Criada! Código: ${p2pRoomCode}. Aguardando parceiro...`, '#38bdf8');
+  });
+
+  peer.on('connection', (conn) => {
+    setupP2pConnection(conn, true);
+  });
+
+  peer.on('error', (err) => {
+    console.error('PeerJS Host Error:', err);
+    if (err.type === 'unavailable-id') {
+      initP2pHost();
+    } else {
+      updateP2pStatus(`Erro na conexão: ${err.message}`, '#ef4444');
+    }
+  });
+}
+
+function initP2pClient(code) {
+  if (typeof Peer === 'undefined') {
+    updateP2pStatus('Erro: PeerJS não carregado. Verifique a conexão.', '#ef4444');
+    return;
+  }
+
+  const cleanCode = (code || '').trim();
+  if (!cleanCode || cleanCode.length !== 4) {
+    updateP2pStatus('Digite um código válido de 4 dígitos (Ex: 4829)', '#facc15');
+    return;
+  }
+
+  updateP2pStatus(`Conectando à sala ${cleanCode}...`, '#facc15');
+
+  if (peer) { try { peer.destroy(); } catch(e){} }
+
+  peer = new Peer({ debug: 1 });
+
+  peer.on('open', () => {
+    const targetPeerId = 'outbreak-hotel-' + cleanCode;
+    const conn = peer.connect(targetPeerId, { reliable: true });
+    setupP2pConnection(conn, false);
+  });
+
+  peer.on('error', (err) => {
+    console.error('PeerJS Client Error:', err);
+    updateP2pStatus(`Não foi possível conectar à sala ${cleanCode}. Verifique o código.`, '#ef4444');
+  });
+}
+
+function setupP2pConnection(conn, isHost) {
+  p2pConn = conn;
+  isP2pHost = isHost;
+
+  conn.on('open', () => {
+    isOnlineMultiplayer = true;
+    updateP2pStatus('🟢 Conectado! Iniciando jogo Co-op...', '#34d399');
+
+    if (isHost) {
+      selectedCharacter = 'jake';
+      partnerCharacter = 'jane';
+    } else {
+      selectedCharacter = 'jane';
+      partnerCharacter = 'jake';
+    }
+
+    updateActiveCharacterModel();
+    setupPartnerMesh(partnerCharacter);
+
+    setTimeout(() => {
+      startGame();
+    }, 800);
+  });
+
+  conn.on('data', (data) => {
+    handleP2pData(data);
+  });
+
+  conn.on('close', () => {
+    isOnlineMultiplayer = false;
+    updateP2pStatus('❌ O outro jogador desconectou.', '#ef4444');
+    if (partnerGroup) partnerGroup.visible = false;
+  });
+
+  conn.on('error', (err) => {
+    console.error('P2P Connection error:', err);
+    updateP2pStatus('Erro na transmissão P2P.', '#ef4444');
+  });
+}
+
+function handleP2pData(data) {
+  if (!data || typeof data !== 'object') return;
+
+  if (data.type === 'PLAYER_SYNC') {
+    partnerTargetPos.set(data.x, data.y, data.z);
+    partnerTargetYaw = data.yaw;
+    if (partnerGroup && !partnerGroup.visible) partnerGroup.visible = true;
+
+    if (data.anim) playPartnerAnim(data.anim);
+
+    partnerHealth = data.hp || 100;
+    partnerEquippedWeapon = data.weapon;
+
+    if (partnerRevolverMesh) partnerRevolverMesh.visible = (data.weapon === 'revolver');
+    if (partnerShotgunMesh) partnerShotgunMesh.visible = (data.weapon === 'shotgun');
+  } else if (data.type === 'EVENT_FIRE') {
+    if (data.weaponId === 'shotgun') playShotgunSound();
+    else playGunshotSound();
+  } else if (data.type === 'GAME_STATE_SYNC' && !isP2pHost) {
+    if (Array.isArray(data.enemies)) {
+      data.enemies.forEach(eState => {
+        const enemy = activeEnemies.find(e => e.id === eState.id);
+        if (enemy) {
+          enemy.group.position.set(eState.x, eState.y, eState.z);
+          enemy.group.rotation.y = eState.yaw;
+          enemy.hp = eState.hp;
+          if (eState.isDead && !enemy.isDead) {
+            enemy.isDead = true;
+            playEnemyAnim(enemy, 'death', 0.15);
+          }
+        }
+      });
+    }
+    if (Array.isArray(data.doors)) {
+      data.doors.forEach(dState => {
+        const door = interactiveDoors.find(d => d.roomNumber === dState.roomNumber);
+        if (door) {
+          door.isOpen = dState.isOpen;
+          door.targetAngle = dState.targetAngle;
+          door.isUnlocked = dState.isUnlocked;
+        }
+      });
+    }
+  }
+}
+
 function initMenuNavigation() {
   // Navegação no Menu Inicial
   const btnOpenDiff = document.getElementById('btn-open-difficulty');
   const btnOpenInst = document.getElementById('btn-open-instructions');
+  const btnOpenOnline = document.getElementById('btn-open-online');
   const btnBackDiff = document.getElementById('btn-back-from-diff');
   const btnBackInst = document.getElementById('btn-back-from-inst');
+  const btnBackOnline = document.getElementById('btn-back-online');
   const btnStartTestRoom = document.getElementById('btn-start-test-room');
+  const btnP2pCreate = document.getElementById('btn-p2p-create-room');
+  const btnP2pJoin = document.getElementById('btn-p2p-join-room');
 
   if (btnOpenDiff) btnOpenDiff.addEventListener('click', () => showMenuScreen('menu-screen-difficulty'));
   if (btnOpenInst) btnOpenInst.addEventListener('click', () => showMenuScreen('menu-screen-instructions'));
+  if (btnOpenOnline) btnOpenOnline.addEventListener('click', () => showMenuScreen('menu-screen-online'));
   if (btnBackDiff) btnBackDiff.addEventListener('click', () => showMenuScreen('menu-screen-main'));
   if (btnBackInst) btnBackInst.addEventListener('click', () => showMenuScreen('menu-screen-main'));
+  if (btnBackOnline) btnBackOnline.addEventListener('click', () => showMenuScreen('menu-screen-main'));
   if (btnStartTestRoom) btnStartTestRoom.addEventListener('click', startTestRoomMode);
+  if (btnP2pCreate) btnP2pCreate.addEventListener('click', () => initP2pHost());
+  if (btnP2pJoin) {
+    btnP2pJoin.addEventListener('click', () => {
+      const codeInput = document.getElementById('input-p2p-room-code');
+      if (codeInput) initP2pClient(codeInput.value);
+    });
+  }
 
   // Navegação no Menu de Pausa
   const btnResumeGame = document.getElementById('btn-resume-game');
@@ -4716,6 +5030,57 @@ function animate() {
 
   const delta = Math.min(clock.getDelta(), 0.1);
   const time = clock.getElapsedTime();
+
+  // --- SINCRONIZAÇÃO P2P MULTIPLAYER CO-OP ---
+  if (isOnlineMultiplayer && p2pConn && p2pConn.open && isGameStarted && !isGamePaused) {
+    p2pConn.send({
+      type: 'PLAYER_SYNC',
+      x: playerGroup.position.x,
+      y: playerGroup.position.y,
+      z: playerGroup.position.z,
+      yaw: playerRotation,
+      anim: activePlayerAction ? activePlayerAction._clip.name : 'idle',
+      hp: playerHealth,
+      weapon: equippedWeaponId,
+      char: selectedCharacter
+    });
+
+    if (isP2pHost) {
+      const enemyStates = activeEnemies.map(e => ({
+        id: e.id,
+        x: e.group.position.x,
+        y: e.group.position.y,
+        z: e.group.position.z,
+        yaw: e.group.rotation.y,
+        hp: e.hp,
+        isDead: e.isDead
+      }));
+      const doorStates = interactiveDoors.map(d => ({
+        roomNumber: d.roomNumber,
+        isOpen: d.isOpen,
+        targetAngle: d.targetAngle,
+        isUnlocked: d.isUnlocked
+      }));
+      p2pConn.send({
+        type: 'GAME_STATE_SYNC',
+        enemies: enemyStates,
+        doors: doorStates
+      });
+    }
+  }
+
+  // Interpola a posição e animação do parceiro 3D
+  if (isOnlineMultiplayer && partnerGroup && partnerGroup.visible) {
+    partnerGroup.position.lerp(partnerTargetPos, delta * 15.0);
+    let yawDiff = partnerTargetYaw - partnerGroup.rotation.y;
+    while (yawDiff < -Math.PI) yawDiff += Math.PI * 2;
+    while (yawDiff > Math.PI) yawDiff -= Math.PI * 2;
+    partnerGroup.rotation.y += yawDiff * Math.min(1.0, delta * 15.0);
+
+    if (partnerMixer) {
+      partnerMixer.update(delta);
+    }
+  }
 
   // Animação das névoas
   for (const envId in roomFogObjects) {
