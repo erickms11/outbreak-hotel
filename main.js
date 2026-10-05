@@ -3583,15 +3583,7 @@ function updateMobileControlsVisibility() {
     }
   }
 
-  // Oculta o botão de controles touch no menu principal do PC, mostrando apenas no celular (mobile real)
-  if (btnToggleMobileMode) {
-    const isRealMobile = checkIsMobileDevice();
-    if (isRealMobile) {
-      btnToggleMobileMode.style.display = '';
-    } else {
-      btnToggleMobileMode.style.display = 'none';
-    }
-  }
+
 
   if (mobileModeTag) {
     const isAutoDetected = checkIsMobileDevice();
