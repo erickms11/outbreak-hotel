@@ -67,12 +67,8 @@ function getAudioContext() {
   return globalAudioCtx;
 }
 
-// --- SISTEMA DE TRILHA SONORA (BGM: MENU & GAMEPLAY) ---
-const menuBGM = new Audio('assets/sounds/menu.mp3');
-menuBGM.loop = true;
-menuBGM.volume = 0.20;
-
-const GAMEPLAY_BGM_TRACKS = [
+// --- SISTEMA DE TRILHA SONORA UNIFICADA (BACKGROUND SONGS ALEATÓRIAS: MENU & GAMEPLAY) ---
+const BACKGROUND_BGM_TRACKS = [
   'assets/sounds/background1.mp3',
   'assets/sounds/background2.mp3',
   'assets/sounds/background3.mp3',
@@ -80,7 +76,7 @@ const GAMEPLAY_BGM_TRACKS = [
   'assets/sounds/background5.mp3'
 ];
 
-let currentGameplayAudio = null;
+let currentGameplayAudio = null; // Áudio de trilha sonora em execução
 let bgmPlaylistQueue = [];
 let lastPlayedBgmTrack = null;
 
@@ -93,30 +89,11 @@ function shuffleArray(arr) {
   return newArr;
 }
 
-function playMenuBGM() {
+function playNextBackgroundBGM() {
   if (!AUDIO_ENABLED) return;
-  if (currentGameplayAudio) {
-    try { currentGameplayAudio.pause(); } catch (e) { }
-  }
-  try {
-    if (menuBGM.paused) {
-      const p = menuBGM.play();
-      if (p !== undefined) p.catch(() => { });
-    }
-  } catch (e) { }
-}
-
-function stopMenuBGM() {
-  try {
-    menuBGM.pause();
-  } catch (e) { }
-}
-
-function playNextGameplayBGM() {
-  if (!AUDIO_ENABLED || !isGameStarted || isGamePaused || isPlayerDead) return;
 
   if (bgmPlaylistQueue.length === 0) {
-    bgmPlaylistQueue = shuffleArray(GAMEPLAY_BGM_TRACKS);
+    bgmPlaylistQueue = shuffleArray(BACKGROUND_BGM_TRACKS);
     if (bgmPlaylistQueue.length > 1 && bgmPlaylistQueue[0] === lastPlayedBgmTrack) {
       const temp = bgmPlaylistQueue[0];
       bgmPlaylistQueue[0] = bgmPlaylistQueue[1];
@@ -134,9 +111,9 @@ function playNextGameplayBGM() {
   }
 
   currentGameplayAudio = new Audio(nextTrackPath);
-  currentGameplayAudio.volume = 0.30;
+  currentGameplayAudio.volume = 0.28;
   currentGameplayAudio.onended = () => {
-    playNextGameplayBGM();
+    playNextBackgroundBGM();
   };
 
   const p = currentGameplayAudio.play();
@@ -145,27 +122,31 @@ function playNextGameplayBGM() {
   }
 }
 
-function startGameplayBGM() {
+function startBackgroundBGM() {
   if (!AUDIO_ENABLED) return;
-  stopMenuBGM();
+
+  if (currentGameplayAudio && !currentGameplayAudio.paused) {
+    // Trilha sonora aleatória já está tocando normalmente
+    return;
+  }
 
   if (currentGameplayAudio && currentGameplayAudio.paused && !currentGameplayAudio.ended && currentGameplayAudio.currentTime > 0) {
     const p = currentGameplayAudio.play();
     if (p !== undefined) {
-      p.catch(() => playNextGameplayBGM());
+      p.catch(() => playNextBackgroundBGM());
     }
   } else {
-    playNextGameplayBGM();
+    playNextBackgroundBGM();
   }
 }
 
-function pauseGameplayBGM() {
+function pauseBackgroundBGM() {
   if (currentGameplayAudio) {
     try { currentGameplayAudio.pause(); } catch (e) { }
   }
 }
 
-function stopGameplayBGM() {
+function stopBackgroundBGM() {
   if (currentGameplayAudio) {
     try {
       currentGameplayAudio.pause();
@@ -175,6 +156,14 @@ function stopGameplayBGM() {
   }
   bgmPlaylistQueue = [];
 }
+
+// Aliases para compatibilidade total com chamadas existentes no código
+function playMenuBGM() { startBackgroundBGM(); }
+function stopMenuBGM() { /* Mantém a trilha de fundo tocando continuamente */ }
+function startGameplayBGM() { startBackgroundBGM(); }
+function pauseGameplayBGM() { pauseBackgroundBGM(); }
+function stopGameplayBGM() { stopBackgroundBGM(); }
+function playNextGameplayBGM() { playNextBackgroundBGM(); }
 
 // --- HELPER PARA TOCAR ARQUIVOS DE ÁUDIO (.mp3, .ogg, .m4a, .wav) ---
 function playBetterAudio(key, volume = 0.5) {
