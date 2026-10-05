@@ -3831,18 +3831,6 @@ if (btnTouchCamMode) {
   }, { passive: false });
 }
 
-if (btnToggleMobileMode) {
-  btnToggleMobileMode.addEventListener('click', () => {
-    forceMobileMode = !forceMobileMode;
-    isMobileDevice = checkIsMobileDevice() || forceMobileMode;
-    if (mobileModeTag) {
-      mobileModeTag.textContent = forceMobileMode ? 'ATIVADO' : (checkIsMobileDevice() ? 'AUTO' : 'DESATIVADO');
-      mobileModeTag.style.background = forceMobileMode ? 'rgba(56, 189, 248, 0.3)' : 'rgba(52, 211, 153, 0.25)';
-      mobileModeTag.style.color = forceMobileMode ? '#38bdf8' : '#34d399';
-    }
-    updateMobileControlsVisibility();
-  });
-}
 
 window.addEventListener('resize', () => {
   isMobileDevice = checkIsMobileDevice();
