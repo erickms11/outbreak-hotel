@@ -62,6 +62,7 @@ class AssetManager {
   loadFBXAnimation(key, path) {
     this.fbxLoader.load(path, (fbx) => {
       if (fbx && fbx.animations && fbx.animations.length > 0) {
+        fbx.animations[0].name = key;
         this.animations[key] = fbx.animations[0];
       }
     }, undefined, (err) => {

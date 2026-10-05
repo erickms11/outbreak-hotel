@@ -2307,6 +2307,7 @@ function hasLineOfSight(fromPos, toPos) {
   return true;
 }
 
+let lastShotTime = 0;
 function fireActiveWeapon() {
   if (isPlayerDead || !equippedWeaponId) return;
 
@@ -2322,6 +2323,12 @@ function fireActiveWeapon() {
     return;
   }
 
+  // Previne disparos acidentais múltiplos ultrarrápidos
+  const now = performance.now();
+  const fireRate = equippedWeaponId === 'shotgun' ? 650 : 250;
+  if (now - lastShotTime < fireRate) return;
+  lastShotTime = now;
+
   const weapon = weaponInventory[equippedWeaponId];
   if (weapon.loadedAmmo > 0) {
     weapon.loadedAmmo--;
@@ -2334,8 +2341,10 @@ function fireActiveWeapon() {
     // Efeito de recuo na animação de disparo
     if (equippedWeaponId === 'revolver' && playerActions['shoot']) {
       playerActions['shoot'].reset().play();
+      currentPlayerAnimName = 'shoot';
     } else if (equippedWeaponId === 'shotgun' && playerActions['rifle_shoot']) {
       playerActions['rifle_shoot'].reset().play();
+      currentPlayerAnimName = 'rifle_shoot';
     } else {
       playPlayerAnim('shoot', 0.05);
     }
@@ -2356,9 +2365,6 @@ function fireActiveWeapon() {
     combatFlashLight.color.setHex(0xfacc15);
     combatFlashLight.intensity = 7.0;
     setTimeout(() => { combatFlashLight.intensity = 0.0; }, 80);
-
-    // Recuo de câmera
-    cameraPitch = Math.min(1.15, cameraPitch + 0.05);
 
     // Raycast do Disparo
     const shootOrigin = playerGroup.position.clone().add(new THREE.Vector3(0, 0.45, 0));
@@ -2808,6 +2814,7 @@ let keyAiming = false;
 let playerMixer = null;
 let playerActions = {};
 let activePlayerAction = null;
+let currentPlayerAnimName = 'idle';
 let jakeModelInstance = null;
 let janeModelInstance = null;
 let jakeHasSkeleton = false;
@@ -2977,6 +2984,8 @@ function playPlayerAnim(actionName, duration = 0.2) {
   if (!playerMixer || !playerActions[mappedAction]) {
     mappedAction = actionName; // fallback
   }
+
+  currentPlayerAnimName = mappedAction;
 
   if (!playerMixer || !playerActions[mappedAction]) return;
   const nextAction = playerActions[mappedAction];
@@ -3718,7 +3727,7 @@ if (btnTouchShoot) {
     if (!shootIntervalId) {
       shootIntervalId = setInterval(() => {
         if (isGameStarted && !isGamePaused && !isPlayerDead) fireActiveWeapon();
-      }, 200);
+      }, 320);
     }
   }, { passive: false });
 
@@ -3891,6 +3900,10 @@ function setupPartnerMesh(charName) {
     if (c.isMesh) {
       c.castShadow = true;
       c.receiveShadow = true;
+      const name = c.name.toLowerCase();
+      if (name.includes('weapon') || name.includes('gun') || name.includes('rifle') || name.includes('pistol') || name.includes('shotgun') || name.includes('sword') || name.includes('assault')) {
+        c.visible = false;
+      }
     }
     if (c.isBone && c.name && c.name.includes('RightHand')) {
       rightHand = c;
@@ -3899,20 +3912,29 @@ function setupPartnerMesh(charName) {
 
   partnerGroup.add(partnerModelInstance);
   partnerGroup.visible = true;
-  partnerGroup.position.set(1.5, 1.0, 0);
+  partnerGroup.position.set(25, 1.0, 0);
 
   if (assetManager) {
     partnerMixer = new THREE.AnimationMixer(partnerModelInstance);
     partnerActions = {};
+    activePartnerAction = null;
     const isFemale = (charName === 'jane');
-    const anims = ['idle', 'walk', 'run', 'aim', 'shoot', 'death'];
+    const anims = [
+      'idle', 'walk', 'run', 'jump', 'shoot', 'reload',
+      'pistol_idle', 'pistol_walk', 'pistol_run',
+      'rifle_idle', 'rifle_run', 'rifle_shoot',
+      'death', 'dying', 'injured_walk', 'injured_run'
+    ];
     anims.forEach(animName => {
       let animKey = animName;
       if (animName === 'idle') animKey = isFemale ? 'idle_female' : 'idle_male';
       if (animName === 'walk') animKey = isFemale ? 'walk_female' : 'walk_male';
-      if (animName === 'shoot' || animName === 'aim') animKey = 'shoot';
-      let clip = assetManager.getAnimation(animKey) || assetManager.getAnimation(animName);
-      if (clip) {
+
+      let clip = assetManager.getAnimation(animKey);
+      if (!clip && animKey !== animName) {
+        clip = assetManager.getAnimation(animName);
+      }
+      if (clip && clip.tracks) {
         const clipClone = clip.clone();
         clipClone.tracks.forEach(track => {
           if (track && track.name) {
@@ -3924,21 +3946,27 @@ function setupPartnerMesh(charName) {
               const initialZ = values[2] || 0;
               for (let i = 0; i < values.length; i += 3) {
                 values[i] = initialX;
-                if (animName !== 'death') values[i + 1] = initialY;
+                if (animName !== 'jump' && animName !== 'death' && animName !== 'dying') {
+                  values[i + 1] = initialY;
+                }
                 values[i + 2] = initialZ;
               }
             }
           }
         });
         const action = partnerMixer.clipAction(clipClone);
-        if (animName === 'death' || animName === 'shoot') {
+        if (['jump', 'shoot', 'reload', 'rifle_shoot', 'death', 'dying'].includes(animName)) {
           action.setLoop(THREE.LoopOnce);
           action.clampWhenFinished = true;
         }
         partnerActions[animName] = action;
       }
     });
-    if (partnerActions['idle']) partnerActions['idle'].play();
+
+    if (partnerActions['idle']) {
+      partnerActions['idle'].play();
+      activePartnerAction = partnerActions['idle'];
+    }
   }
 
   partnerWeaponGroup = new THREE.Group();
@@ -3969,13 +3997,39 @@ function setupPartnerMesh(charName) {
 }
 
 function playPartnerAnim(actionName, duration = 0.2) {
-  if (!partnerMixer || !partnerActions[actionName]) return;
-  const nextAction = partnerActions[actionName];
-  if (nextAction === activePartnerAction) return;
+  if (!partnerMixer || !actionName) return;
 
-  nextAction.reset().fadeIn(duration).play();
-  if (activePartnerAction) activePartnerAction.fadeOut(duration);
-  activePartnerAction = nextAction;
+  let targetAction = partnerActions[actionName];
+
+  // Se não encontrar o nome exato recebido via rede, busca fallbacks inteligentes
+  if (!targetAction) {
+    if (actionName.includes('walk')) {
+      targetAction = partnerActions['walk'] || partnerActions['pistol_walk'];
+    } else if (actionName.includes('run')) {
+      targetAction = partnerActions['run'] || partnerActions['pistol_run'] || partnerActions['rifle_run'] || partnerActions['walk'];
+    } else if (actionName.includes('shoot')) {
+      targetAction = partnerActions['shoot'] || partnerActions['rifle_shoot'];
+    } else if (actionName.includes('idle')) {
+      targetAction = partnerActions['idle'] || partnerActions['pistol_idle'] || partnerActions['rifle_idle'];
+    } else if (actionName.includes('death') || actionName.includes('dying')) {
+      targetAction = partnerActions['death'] || partnerActions['dying'];
+    } else if (actionName.includes('aim')) {
+      targetAction = partnerActions['shoot'] || partnerActions['idle'];
+    }
+  }
+
+  if (!targetAction) {
+    targetAction = partnerActions['idle'];
+  }
+
+  if (!targetAction) return;
+  if (targetAction === activePartnerAction) return;
+
+  targetAction.reset().fadeIn(duration).play();
+  if (activePartnerAction) {
+    activePartnerAction.fadeOut(duration);
+  }
+  activePartnerAction = targetAction;
 }
 
 function updateP2pStatus(text, color = '#ef4444') {
@@ -4106,6 +4160,11 @@ function handleP2pData(data) {
     partnerTargetYaw = data.yaw;
     if (partnerGroup && !partnerGroup.visible) partnerGroup.visible = true;
 
+    // Garante que o modelo do parceiro é criado ou recriado caso o personagem mude
+    if (!partnerModelInstance || (data.char && data.char !== partnerCharacter)) {
+      setupPartnerMesh(data.char || partnerCharacter);
+    }
+
     if (data.anim) playPartnerAnim(data.anim);
 
     partnerHealth = data.hp || 100;
@@ -4114,8 +4173,13 @@ function handleP2pData(data) {
     if (partnerRevolverMesh) partnerRevolverMesh.visible = (data.weapon === 'revolver');
     if (partnerShotgunMesh) partnerShotgunMesh.visible = (data.weapon === 'shotgun');
   } else if (data.type === 'EVENT_FIRE') {
-    if (data.weaponId === 'shotgun') playShotgunSound();
-    else playGunshotSound();
+    if (data.weaponId === 'shotgun') {
+      playShotgunSound();
+      playPartnerAnim('rifle_shoot', 0.05);
+    } else {
+      playGunshotSound();
+      playPartnerAnim('shoot', 0.05);
+    }
   } else if (data.type === 'GAME_STATE_SYNC' && !isP2pHost) {
     if (Array.isArray(data.enemies)) {
       data.enemies.forEach(eState => {
@@ -4941,6 +5005,7 @@ function resetGameState() {
     if (janeActions['idle']) janeActions['idle'].reset().play();
   }
   activePlayerAction = null;
+  currentPlayerAnimName = 'idle';
   currentWeaponStance = 'unarmed';
   walkBobTimer = 0;
   idleAnimTimer = 0;
@@ -5148,13 +5213,19 @@ function animate() {
 
   // --- SINCRONIZAÇÃO P2P MULTIPLAYER CO-OP ---
   if (isOnlineMultiplayer && p2pConn && p2pConn.open && isGameStarted && !isGamePaused) {
+    let animToSend = currentPlayerAnimName || 'idle';
+    const horizontalSpeedSq = velocity.x * velocity.x + velocity.z * velocity.z;
+    if (horizontalSpeedSq > 0.05 && (animToSend === 'idle' || animToSend === 'pistol_idle' || animToSend === 'rifle_idle')) {
+      animToSend = keys.shift ? (currentWeaponStance === 'shotgun' ? 'rifle_run' : (currentWeaponStance === 'pistol' ? 'pistol_run' : 'run')) : (currentWeaponStance === 'pistol' ? 'pistol_walk' : (currentWeaponStance === 'shotgun' ? 'rifle_run' : 'walk'));
+    }
+
     p2pConn.send({
       type: 'PLAYER_SYNC',
       x: playerGroup.position.x,
       y: playerGroup.position.y,
       z: playerGroup.position.z,
       yaw: playerRotation,
-      anim: activePlayerAction ? activePlayerAction._clip.name : 'idle',
+      anim: animToSend,
       hp: playerHealth,
       weapon: equippedWeaponId,
       char: selectedCharacter
@@ -5186,11 +5257,30 @@ function animate() {
 
   // Interpola a posição e animação do parceiro 3D
   if (isOnlineMultiplayer && partnerGroup && partnerGroup.visible) {
+    const prevX = partnerGroup.position.x;
+    const prevZ = partnerGroup.position.z;
+
     partnerGroup.position.lerp(partnerTargetPos, delta * 15.0);
     let yawDiff = partnerTargetYaw - partnerGroup.rotation.y;
     while (yawDiff < -Math.PI) yawDiff += Math.PI * 2;
     while (yawDiff > Math.PI) yawDiff -= Math.PI * 2;
     partnerGroup.rotation.y += yawDiff * Math.min(1.0, delta * 15.0);
+
+    // Se o parceiro estiver se deslocando e a animação atual estiver em idle, aciona walk/run correspondente
+    const dx = partnerGroup.position.x - prevX;
+    const dz = partnerGroup.position.z - prevZ;
+    const distSq = (dx * dx + dz * dz) / Math.max(delta, 0.001);
+
+    if (distSq > 0.01) {
+      if (!activePartnerAction ||
+          activePartnerAction === partnerActions['idle'] ||
+          activePartnerAction === partnerActions['pistol_idle'] ||
+          activePartnerAction === partnerActions['rifle_idle']) {
+        const moveAnim = partnerEquippedWeapon === 'revolver' ? 'pistol_walk' :
+                         (partnerEquippedWeapon === 'shotgun' ? 'rifle_run' : 'walk');
+        playPartnerAnim(moveAnim, 0.15);
+      }
+    }
 
     if (partnerMixer) {
       partnerMixer.update(delta);
