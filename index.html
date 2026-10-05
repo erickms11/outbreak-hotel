@@ -26,19 +26,7 @@
     <meta name="apple-mobile-web-app-title" content="Outbreak Hotel" />
     <meta name="theme-color" content="#090d16" />
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-    <script>
-      // Desinstala Service Workers antigos para garantir carregamento imediato sem cache corrompido
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (var r of registrations) { r.unregister(); }
-        });
-        if (window.caches) {
-          caches.keys().then(function(names) {
-            for (var name of names) { caches.delete(name); }
-          });
-        }
-      }
-    </script>
+
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
@@ -257,7 +245,7 @@
                 <span class="btn-icon">⛶</span>
               </button>
 
-              <button id="btn-pwa-install" class="btn-menu-icon hidden" title="Instalar App no Celular (PWA)" aria-label="Instalar App">
+              <button id="btn-pwa-install" class="btn-menu-icon" title="Instalar App / PWA (Tablet, Celular e PC)" aria-label="Instalar App">
                 <span class="btn-icon">🏨</span>
               </button>
             </div>
@@ -427,6 +415,27 @@
 
           <button id="btn-back-from-inst" class="btn-menu-back">
             <span>◀ VOLTAR AO MENU PRINCIPAL</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Informativo de Instalação PWA (Tablet, iPad, Celular e PC) -->
+    <div id="pwa-modal" class="hidden">
+      <div class="pause-card glass-panel" style="max-width: 480px; text-align: center;">
+        <div class="menu-header compact">
+          <div class="hotel-emblem">🏨📱</div>
+          <h2>INSTALAR OUTBREAK HOTEL</h2>
+          <p class="menu-tagline">Jogue em tela cheia com alta performance e sem barras do navegador</p>
+        </div>
+        <div id="pwa-modal-instructions" style="background: rgba(0,0,0,0.5); border-radius: 12px; padding: 16px; margin: 18px 0; text-align: left; font-size: 0.9rem; line-height: 1.6; color: #cbd5e1; border: 1px solid rgba(255,255,255,0.12);">
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: center; width: 100%;">
+          <button id="btn-pwa-modal-action" class="btn-start-game" style="flex: 1; padding: 12px 16px; font-size: 0.95rem;">
+            <span>INSTALAR AGORA 📲</span>
+          </button>
+          <button id="btn-pwa-modal-close" class="btn-menu-secondary" style="padding: 12px 18px; width: auto;">
+            <span>FECHAR</span>
           </button>
         </div>
       </div>

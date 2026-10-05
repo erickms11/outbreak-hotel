@@ -962,7 +962,7 @@ body, html {
 }
 
 /* --- MODAL DE PAUSA --- */
-#pause-modal {
+#pause-modal, #pwa-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -980,7 +980,7 @@ body, html {
   pointer-events: auto;
 }
 
-#pause-modal.hidden {
+#pause-modal.hidden, #pwa-modal.hidden {
   display: none !important;
   opacity: 0;
   pointer-events: none;
@@ -2277,7 +2277,7 @@ body, html {
 
 /* --- REGRAS DE ADAPTAÇÃO PROPORCIONAL DE TELA PARA MOBILE (MAX-WIDTH 900PX) --- */
 @media (max-width: 900px) {
-  #start-menu-modal, #pause-modal, #victory-modal, #game-over-modal {
+  #start-menu-modal, #pause-modal, #victory-modal, #game-over-modal, #pwa-modal {
     padding: 10px;
     align-items: center;
     justify-content: center;

@@ -3675,6 +3675,7 @@ let lastLookPos = { x: 0, y: 0 };
 
 if (touchLookZone) {
   touchLookZone.addEventListener('touchstart', (e) => {
+    if (e.target && e.target.closest && e.target.closest('button, .mobile-btn, .mobile-action-cluster, #interaction-prompt, .interaction-prompt')) return;
     if (lookTouchId !== null) return;
     const touch = e.changedTouches[0];
     lookTouchId = touch.identifier;
@@ -3822,13 +3823,15 @@ if (btnTouchPause) {
 }
 
 if (btnTouchCamMode) {
-  btnTouchCamMode.addEventListener('touchstart', (e) => {
-    e.preventDefault();
+  const toggleCamMode = (e) => {
+    if (e && e.cancelable) e.preventDefault();
     isMobileCameraMode = !isMobileCameraMode;
     if (touchCamLabel) {
       touchCamLabel.textContent = isMobileCameraMode ? '📷 COSTAS (FIXA)' : '📷 CÂMERA LIVRE';
     }
-  }, { passive: false });
+  };
+  btnTouchCamMode.addEventListener('touchstart', toggleCamMode, { passive: false });
+  btnTouchCamMode.addEventListener('click', toggleCamMode);
 }
 
 
@@ -4754,7 +4757,8 @@ if (interactionPrompt) {
 const raycaster = new THREE.Raycaster();
 
 window.addEventListener('pointerdown', (e) => {
-  if (e.target && e.target.closest && e.target.closest('#hud-overlay button, .btn-action, #interaction-prompt, a, #victory-modal, #floating-hud-toggle, #permanent-weapon-hud, #game-over-modal, #start-menu-modal')) {
+  if (e.pointerType === 'touch') return;
+  if (e.target && e.target.closest && e.target.closest('#hud-overlay button, .btn-action, #interaction-prompt, a, #victory-modal, #floating-hud-toggle, #permanent-weapon-hud, #game-over-modal, #start-menu-modal, #mobile-touch-controls, #pwa-modal')) {
     return;
   }
   if (e.button === 0) {
@@ -4812,12 +4816,14 @@ if (btnZoomIn) btnZoomIn.addEventListener('click', () => updateZoom(-1.8));
 if (btnZoomOut) btnZoomOut.addEventListener('click', () => updateZoom(1.8));
 
 window.addEventListener('pointerdown', (e) => {
-  if (e.target && e.target.closest && e.target.closest('#hud-overlay button, .btn-action, #interaction-prompt, a, #victory-modal, #floating-hud-toggle, #permanent-weapon-hud, #start-menu-modal, #game-over-modal, #pause-modal')) return;
+  if (e.pointerType === 'touch') return;
+  if (e.target && e.target.closest && e.target.closest('#hud-overlay button, .btn-action, #interaction-prompt, a, #victory-modal, #floating-hud-toggle, #permanent-weapon-hud, #start-menu-modal, #game-over-modal, #pause-modal, #mobile-touch-controls, #pwa-modal')) return;
   isPointerDown = true;
   pointerLastX = e.clientX; pointerLastY = e.clientY;
 });
 
 window.addEventListener('pointermove', (e) => {
+  if (e.pointerType === 'touch') return;
   if (!isPointerDown) return;
   const dx = e.clientX - pointerLastX;
   const dy = e.clientY - pointerLastY;
@@ -4829,7 +4835,10 @@ window.addEventListener('pointermove', (e) => {
   }
 });
 
-window.addEventListener('pointerup', () => { isPointerDown = false; });
+window.addEventListener('pointerup', (e) => {
+  if (e.pointerType === 'touch') return;
+  isPointerDown = false;
+});
 
 function resetGameState() {
   // 1. Interrompe todos os sons e áudios que estiverem tocando
@@ -5993,13 +6002,15 @@ function animate() {
         const targetPitch = isAiming ? 0.18 : 0.22;
         cameraPitch = THREE.MathUtils.lerp(cameraPitch, targetPitch, Math.min(1.0, 8.0 * delta));
 
-        // Rotação suave para acompanhar as costas do jogador (playerRotation + PI)
-        const desiredYaw = playerRotation + Math.PI;
-        let diffYaw = desiredYaw - cameraYaw;
-        while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
-        while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
-        const alignSpeed = isMoving ? 5.5 : (isAiming ? 9.0 : 3.0);
-        cameraYaw += diffYaw * Math.min(1.0, alignSpeed * delta);
+        // Rotação suave para acompanhar as costas do jogador SOMENTE quando em locomoção ativa (evita giros indesejados ao parar ou interagir)
+        if (isMoving) {
+          const desiredYaw = playerRotation + Math.PI;
+          let diffYaw = desiredYaw - cameraYaw;
+          while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
+          while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
+          const alignSpeed = 4.5;
+          cameraYaw += diffYaw * Math.min(1.0, alignSpeed * delta);
+        }
       } else {
         // Câmera Livre: mantém controle do jogador via touchLookZone sem forçar ângulo
         const targetDist = isAiming ? 2.2 : 3.4;
@@ -6428,27 +6439,124 @@ if ('serviceWorker' in navigator) {
 let deferredPwaInstallPrompt = null;
 const btnPwaInstall = document.getElementById('btn-pwa-install');
 const btnToggleFullscreen = document.getElementById('btn-toggle-fullscreen');
+const pwaModal = document.getElementById('pwa-modal');
+const pwaModalInstructions = document.getElementById('pwa-modal-instructions');
+const btnPwaModalAction = document.getElementById('btn-pwa-modal-action');
+const btnPwaModalClose = document.getElementById('btn-pwa-modal-close');
+
+// Se o app já estiver instalado e rodando em modo standalone (PWA aberto), oculta o botão
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+if (btnPwaInstall) {
+  if (isStandalone) {
+    btnPwaInstall.classList.add('hidden');
+  } else {
+    btnPwaInstall.classList.remove('hidden');
+  }
+}
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPwaInstallPrompt = e;
-  if (btnPwaInstall) {
+  if (btnPwaInstall && !isStandalone) {
     btnPwaInstall.classList.remove('hidden');
   }
 });
 
+function openPwaInstallModal() {
+  if (!pwaModal) return;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (deferredPwaInstallPrompt) {
+    if (pwaModalInstructions) {
+      pwaModalInstructions.innerHTML = `
+        <p style="margin-bottom: 8px; font-weight: 600; color: #38bdf8;">Instalação direta disponível!</p>
+        <p>Clique no botão <strong>INSTALAR AGORA 📲</strong> abaixo para adicionar o <strong>Outbreak Hotel</strong> à sua tela de início como aplicativo independente (sem barras de navegação).</p>
+      `;
+    }
+    if (btnPwaModalAction) {
+      btnPwaModalAction.style.display = 'block';
+      btnPwaModalAction.innerHTML = '<span>INSTALAR AGORA 📲</span>';
+    }
+  } else if (isIOS) {
+    if (pwaModalInstructions) {
+      pwaModalInstructions.innerHTML = `
+        <p style="margin-bottom: 10px; font-weight: 600; color: #facc15;">Como instalar no iPad / iPhone (Safari):</p>
+        <ol style="margin-left: 20px; display: flex; flex-direction: column; gap: 8px;">
+          <li>No Safari, toque no botão <strong>Compartilhar</strong> (ícone de quadrado com seta para cima <strong>[↑]</strong>).</li>
+          <li>Role a lista para baixo e toque em <strong>"Adicionar à Tela de Início"</strong> (ícone <strong>[+]</strong>).</li>
+          <li>Toque em <strong>"Adicionar"</strong> no canto superior direito.</li>
+        </ol>
+        <p style="margin-top: 10px; font-size: 0.8rem; color: #94a3b8;">Pronto! O ícone do hotel aparecerá na tela inicial como app nativo em tela cheia.</p>
+      `;
+    }
+    if (btnPwaModalAction) {
+      btnPwaModalAction.style.display = 'block';
+      btnPwaModalAction.innerHTML = '<span>ENTENDI 👍</span>';
+    }
+  } else {
+    if (pwaModalInstructions) {
+      pwaModalInstructions.innerHTML = `
+        <p style="margin-bottom: 10px; font-weight: 600; color: #38bdf8;">Como instalar no Tablet / Celular / PC:</p>
+        <ol style="margin-left: 20px; display: flex; flex-direction: column; gap: 8px;">
+          <li>Abra o menu do navegador tocando nos <strong>3 pontinhos (⋮)</strong> no canto superior.</li>
+          <li>Selecione <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>.</li>
+          <li>Confirme a instalação.</li>
+        </ol>
+        <p style="margin-top: 10px; font-size: 0.8rem; color: #94a3b8;">Dica: No PC, você também pode clicar no ícone de instalar na barra de URL.</p>
+      `;
+    }
+    if (btnPwaModalAction) {
+      btnPwaModalAction.style.display = 'block';
+      btnPwaModalAction.innerHTML = '<span>ENTENDI 👍</span>';
+    }
+  }
+
+  pwaModal.classList.remove('hidden');
+}
+
+function closePwaInstallModal() {
+  if (pwaModal) pwaModal.classList.add('hidden');
+}
+
 if (btnPwaInstall) {
-  btnPwaInstall.addEventListener('click', async () => {
+  btnPwaInstall.addEventListener('click', () => {
     if (deferredPwaInstallPrompt) {
-      deferredPwaInstallPrompt.prompt();
-      const { outcome } = await deferredPwaInstallPrompt.userChoice;
-      if (outcome === 'accepted') {
-        console.log('Usuário aceitou a instalação do PWA');
-      }
-      deferredPwaInstallPrompt = null;
-      btnPwaInstall.classList.add('hidden');
+      deferredPwaInstallPrompt.prompt().then(choice => {
+        if (choice && choice.outcome === 'accepted') {
+          console.log('Usuário aceitou a instalação do PWA');
+          btnPwaInstall.classList.add('hidden');
+        }
+        deferredPwaInstallPrompt = null;
+      }).catch(() => {
+        openPwaInstallModal();
+      });
+    } else {
+      openPwaInstallModal();
     }
   });
+}
+
+if (btnPwaModalAction) {
+  btnPwaModalAction.addEventListener('click', async () => {
+    if (deferredPwaInstallPrompt) {
+      try {
+        deferredPwaInstallPrompt.prompt();
+        const { outcome } = await deferredPwaInstallPrompt.userChoice;
+        if (outcome === 'accepted') {
+          console.log('Usuário aceitou a instalação do PWA');
+          if (btnPwaInstall) btnPwaInstall.classList.add('hidden');
+        }
+      } catch (err) { }
+      deferredPwaInstallPrompt = null;
+      closePwaInstallModal();
+    } else {
+      closePwaInstallModal();
+    }
+  });
+}
+
+if (btnPwaModalClose) {
+  btnPwaModalClose.addEventListener('click', closePwaInstallModal);
 }
 
 if (btnToggleFullscreen) {
