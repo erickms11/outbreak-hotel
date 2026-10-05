@@ -1170,6 +1170,8 @@ function damagePlayer(amount, enemyName = 'Criatura') {
     touchMoveX = 0;
     touchMoveY = 0;
     mouseAiming = gamepadAiming = keyAiming = touchAiming = false;
+    touchRunning = false;
+    if (btnTouchRun) btnTouchRun.classList.remove('active');
     isAiming = false;
     if (typeof aimImpactDotMesh !== 'undefined' && aimImpactDotMesh) aimImpactDotMesh.visible = false;
     playZombieDeathSound(false);
@@ -3539,6 +3541,7 @@ let isMobileCameraMode = true; // Câmera fixa próxima às costas do jogador no
 let touchMoveX = 0;
 let touchMoveY = 0;
 let touchAiming = false;
+let touchRunning = false;
 
 // Elementos da UI Mobile
 const mobileControlsOverlay = document.getElementById('mobile-touch-controls');
@@ -3556,8 +3559,8 @@ const btnTouchReload = document.getElementById('btn-touch-reload');
 const btnTouchHeal = document.getElementById('btn-touch-heal');
 const btnTouchJump = document.getElementById('btn-touch-jump');
 const btnTouchSwap = document.getElementById('btn-touch-swap');
+const btnTouchRun = document.getElementById('btn-touch-run');
 const touchHealCount = document.getElementById('touch-heal-count');
-const btnToggleMobileMode = document.getElementById('btn-toggle-mobile-mode');
 const mobileModeTag = document.getElementById('mobile-mode-tag');
 
 function updateRendererPerformanceSettings() {
@@ -3685,11 +3688,15 @@ if (touchLookZone) {
       if (touch.identifier === lookTouchId) {
         const dx = touch.clientX - lastLookPos.x;
         const dy = touch.clientY - lastLookPos.y;
-        if (isThirdPerson) {
-          cameraYaw -= dx * 0.0018;
-          cameraPitch = THREE.MathUtils.clamp(cameraPitch + dy * 0.0014, -0.15, 1.15);
-        }
         lastLookPos = { x: touch.clientX, y: touch.clientY };
+
+        // Proteção contra saltos bruscos / anomalias de coordenadas
+        if (Math.abs(dx) > 60 || Math.abs(dy) > 60) return;
+
+        if (isThirdPerson) {
+          cameraYaw -= dx * 0.0022;
+          cameraPitch = THREE.MathUtils.clamp(cameraPitch + dy * 0.0016, -0.15, 0.95);
+        }
         break;
       }
     }
@@ -3707,6 +3714,9 @@ if (touchLookZone) {
 
   touchLookZone.addEventListener('touchend', endLookTouch, { passive: true });
   touchLookZone.addEventListener('touchcancel', endLookTouch, { passive: true });
+  // Captura release global para garantir que o toque nunca fique travado
+  window.addEventListener('touchend', endLookTouch, { passive: true });
+  window.addEventListener('touchcancel', endLookTouch, { passive: true });
 }
 
 // Botões de Ação Touch
@@ -3776,6 +3786,18 @@ if (btnTouchJump) {
   btnTouchJump.addEventListener('touchend', (e) => {
     e.preventDefault();
     updateKeyState('space', false);
+  }, { passive: false });
+}
+
+if (btnTouchRun) {
+  btnTouchRun.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    touchRunning = !touchRunning;
+    if (touchRunning) {
+      btnTouchRun.classList.add('active');
+    } else {
+      btnTouchRun.classList.remove('active');
+    }
   }, { passive: false });
 }
 
@@ -4998,6 +5020,8 @@ function resetGameState() {
   }
   activePlayerAction = null;
   currentPlayerAnimName = 'idle';
+  touchRunning = false;
+  if (btnTouchRun) btnTouchRun.classList.remove('active');
   currentWeaponStance = 'unarmed';
   walkBobTimer = 0;
   idleAnimTimer = 0;
@@ -5874,7 +5898,11 @@ function animate() {
     velocity.x += inputVector.x * ACCELERATION * delta;
     velocity.z += inputVector.z * ACCELERATION * delta;
 
-    let isRunning = keys.shift;
+    let isRunning = keys.shift || touchRunning;
+    const touchSpeedRatio = Math.sqrt(touchMoveX * touchMoveX + touchMoveY * touchMoveY);
+    if (touchSpeedRatio > 0.75) {
+      isRunning = true;
+    }
     if (isGamepadConnected && navigator.getGamepads) {
       const gp = navigator.getGamepads()[activeGamepadIndex];
       // Analógico esquerdo totalmente empurrado ou botão L3
@@ -5969,11 +5997,26 @@ function animate() {
 
   if (isThirdPerson && isGameStarted) {
     // Modo de Câmera Mobile
-    if ((isMobileDevice || forceMobileMode) && isMobileCameraMode) {
-      const targetDist = isAiming ? 1.9 : 2.5;
-      cameraDistance = THREE.MathUtils.lerp(cameraDistance, targetDist, Math.min(1.0, 8.0 * delta));
-      const targetPitch = isAiming ? 0.18 : 0.22;
-      cameraPitch = THREE.MathUtils.lerp(cameraPitch, targetPitch, Math.min(1.0, 8.0 * delta));
+    if (isMobileDevice || forceMobileMode) {
+      if (isMobileCameraMode) {
+        // Câmera Fixa nas Costas: posiciona-se naturalmente atrás da rotação do jogador
+        const targetDist = isAiming ? 2.0 : 2.7;
+        cameraDistance = THREE.MathUtils.lerp(cameraDistance, targetDist, Math.min(1.0, 8.0 * delta));
+        const targetPitch = isAiming ? 0.18 : 0.22;
+        cameraPitch = THREE.MathUtils.lerp(cameraPitch, targetPitch, Math.min(1.0, 8.0 * delta));
+
+        // Rotação suave para acompanhar as costas do jogador (playerRotation + PI)
+        const desiredYaw = playerRotation + Math.PI;
+        let diffYaw = desiredYaw - cameraYaw;
+        while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
+        while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
+        const alignSpeed = isMoving ? 5.5 : (isAiming ? 9.0 : 3.0);
+        cameraYaw += diffYaw * Math.min(1.0, alignSpeed * delta);
+      } else {
+        // Câmera Livre: mantém controle do jogador via touchLookZone sem forçar ângulo
+        const targetDist = isAiming ? 2.2 : 3.4;
+        cameraDistance = THREE.MathUtils.lerp(cameraDistance, targetDist, Math.min(1.0, 8.0 * delta));
+      }
     }
 
     const playerTarget = playerGroup.position.clone().add(new THREE.Vector3(0, 1.2, 0));
@@ -5988,32 +6031,30 @@ function animate() {
       playerGroup.position.z + offsetZ
     );
 
-    // 1. Raycast de Colisão da Câmera (Spring-Arm inteligente: previne a câmera de atravessar paredes)
+    // 1. Raycast de Colisão da Câmera (Spring-Arm inteligente: evita atravessar paredes ou clipping)
     const camDir = targetCameraPos.clone().sub(playerTarget);
     const desiredCamDist = camDir.length();
     if (desiredCamDist > 0.05) {
       camDir.normalize();
       cameraRaycaster.set(playerTarget, camDir);
       cameraRaycaster.far = desiredCamDist;
-      cameraRaycaster.near = 0.05;
+      cameraRaycaster.near = 0.1;
 
       const camWallHits = cameraRaycaster.intersectObjects(allWallMeshes, false);
       if (camWallHits.length > 0) {
         const closestHit = camWallHits[0];
-        const safeDist = Math.max(0.85, closestHit.distance - 0.28);
-        targetCameraPos.copy(playerTarget).addScaledVector(camDir, safeDist);
+        if (closestHit.distance < desiredCamDist) {
+          const safeDist = Math.max(0.4, closestHit.distance - 0.22);
+          targetCameraPos.copy(playerTarget).addScaledVector(camDir, safeDist);
+        }
       }
     }
 
-    // 2. Limites perimétricos para garantir que a câmera não saia do hotel
-    const curRoomId = getRoomIdAtPosition(playerGroup.position.x, playerGroup.position.z);
-    if (curRoomId === 'corridor') {
-      targetCameraPos.z = THREE.MathUtils.clamp(targetCameraPos.z, -2.8, 2.8);
-      targetCameraPos.x = THREE.MathUtils.clamp(targetCameraPos.x, -28.5, 28.5);
-    } else if (curRoomId !== 'test_room') {
-      targetCameraPos.x = THREE.MathUtils.clamp(targetCameraPos.x, -29.2, 29.2);
-      targetCameraPos.z = THREE.MathUtils.clamp(targetCameraPos.z, -23.2, 23.2);
-      targetCameraPos.y = THREE.MathUtils.clamp(targetCameraPos.y, 0.45, WALL_HEIGHT - 0.3);
+    // 2. Limites perimétricos gerais (Mantém a câmera dentro do hotel sem sobressaltos no corredor)
+    if (!isTestRoomMode) {
+      targetCameraPos.x = THREE.MathUtils.clamp(targetCameraPos.x, -29.0, 29.0);
+      targetCameraPos.z = THREE.MathUtils.clamp(targetCameraPos.z, -23.0, 23.0);
+      targetCameraPos.y = THREE.MathUtils.clamp(targetCameraPos.y, 0.6, WALL_HEIGHT - 0.4);
     }
 
     currentCameraPos.lerp(targetCameraPos, Math.min(1.0, 14.0 * delta));
