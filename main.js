@@ -3886,7 +3886,7 @@ function playPartnerAnim(actionName, duration = 0.2) {
   activePartnerAction = nextAction;
 }
 
-function updateP2pStatus(text, color = '#38bdf8') {
+function updateP2pStatus(text, color = '#ef4444') {
   const statusElem = document.getElementById('p2p-status-text');
   if (statusElem) {
     statusElem.textContent = text;
@@ -3919,7 +3919,7 @@ function initP2pHost() {
       codeDisplay.textContent = p2pRoomCode;
       codeDisplay.classList.remove('hidden');
     }
-    updateP2pStatus(`👑 Sala Criada! Código: ${p2pRoomCode}. Aguardando parceiro...`, '#38bdf8');
+    updateP2pStatus(`👑 Sala Criada! Código: ${p2pRoomCode}. Aguardando parceiro...`, '#ef4444');
   });
 
   peer.on('connection', (conn) => {
@@ -4305,8 +4305,8 @@ const btnSelectJane = document.getElementById('btn-select-jane');
 function updateCharSelectionUI() {
   if (selectedCharacter === 'jake') {
     if (btnSelectJake) {
-      btnSelectJake.style.borderColor = '#38bdf8';
-      btnSelectJake.style.background = 'rgba(56, 189, 248, 0.2)';
+      btnSelectJake.style.borderColor = '#ef4444';
+      btnSelectJake.style.background = 'rgba(239, 68, 68, 0.2)';
       btnSelectJake.style.color = '#fff';
     }
     if (btnSelectJane) {
@@ -4316,8 +4316,8 @@ function updateCharSelectionUI() {
     }
   } else {
     if (btnSelectJane) {
-      btnSelectJane.style.borderColor = '#38bdf8';
-      btnSelectJane.style.background = 'rgba(56, 189, 248, 0.2)';
+      btnSelectJane.style.borderColor = '#ef4444';
+      btnSelectJane.style.background = 'rgba(239, 68, 68, 0.2)';
       btnSelectJane.style.color = '#fff';
     }
     if (btnSelectJake) {

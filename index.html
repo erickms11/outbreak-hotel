@@ -298,10 +298,10 @@
     <!-- Tela de Carregamento (Exibida enquanto os assets são baixados) -->
     <div id="loading-screen" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #cbd5e1; font-family: 'Outfit', sans-serif;">
       <div style="font-size: 3rem; margin-bottom: 20px;">☣️</div>
-      <h1 style="font-size: 2.5rem; letter-spacing: 4px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; color: #fff;">Outbreak <span style="color: #38bdf8;">Hotel</span></h1>
+      <h1 style="font-size: 2.5rem; letter-spacing: 4px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; color: #fff;">Outbreak <span style="color: #ef4444;">Hotel</span></h1>
       <p style="font-size: 1.2rem; color: #94a3b8; font-weight: 500;">CARREGANDO ASSETS... <span id="loading-progress" style="color: #facc15; font-weight: bold;">0%</span></p>
       <div style="width: 300px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 20px; overflow: hidden; position: relative;">
-        <div id="loading-bar" style="width: 0%; height: 100%; background: #38bdf8; border-radius: 4px; transition: width 0.2s;"></div>
+        <div id="loading-bar" style="width: 0%; height: 100%; background: #ef4444; border-radius: 4px; transition: width 0.2s;"></div>
       </div>
     </div>
 
@@ -321,7 +321,7 @@
             <div class="character-selection" style="margin-bottom: 20px; text-align: center; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
               <h3 style="color: #cbd5e1; margin-bottom: 12px; font-size: 0.9rem; letter-spacing: 2px;">SELECIONE SEU SOBREVIVENTE</h3>
               <div style="display: flex; gap: 15px; justify-content: center;">
-                <button id="btn-select-jake" class="btn-char-select active" style="padding: 10px 20px; border: 2px solid #38bdf8; background: rgba(56, 189, 248, 0.2); color: #fff; cursor: pointer; border-radius: 8px; font-weight: bold; transition: 0.2s;">
+                <button id="btn-select-jake" class="btn-char-select active" style="padding: 10px 20px; border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #fff; cursor: pointer; border-radius: 8px; font-weight: bold; transition: 0.2s;">
                   👨 JAKE
                 </button>
                 <button id="btn-select-jane" class="btn-char-select" style="padding: 10px 20px; border: 2px solid transparent; background: rgba(255, 255, 255, 0.05); color: #94a3b8; cursor: pointer; border-radius: 8px; font-weight: bold; transition: 0.2s;">
@@ -382,10 +382,10 @@
 
           <div class="online-menu-container" style="display: flex; flex-direction: column; gap: 16px; width: 100%; margin-top: 10px;">
             <!-- Opção 1: Criar Sala (Host) -->
-            <div class="online-card glass-panel" style="padding: 16px; border-radius: 12px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.3);">
+            <div class="online-card glass-panel" style="padding: 16px; border-radius: 12px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(239, 68, 68, 0.3);">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                <strong style="color: #38bdf8; font-size: 1.05rem;">👑 Criar Sala (Host)</strong>
-                <span id="p2p-host-role-badge" class="diff-tag-pill" style="background: rgba(56, 189, 248, 0.25); color: #38bdf8;">JAKE 👨</span>
+                <strong style="color: #ef4444; font-size: 1.05rem;">👑 Criar Sala (Host)</strong>
+                <span id="p2p-host-role-badge" class="diff-tag-pill" style="background: rgba(239, 68, 68, 0.25); color: #ef4444;">JAKE 👨</span>
               </div>
               <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Gere um código de 4 dígitos para seu amigo conectar no mesmo jogo.</p>
               
@@ -393,7 +393,7 @@
                 <button id="btn-p2p-create-room" class="btn-start-game" style="flex: 1; padding: 12px 16px; font-size: 0.95rem;">
                   <span>CRIAR SALA</span>
                 </button>
-                <div id="p2p-room-code-display" class="hidden" style="padding: 10px 18px; background: rgba(0, 0, 0, 0.5); border: 2px solid #38bdf8; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: bold; color: #38bdf8; letter-spacing: 3px;">
+                <div id="p2p-room-code-display" class="hidden" style="padding: 10px 18px; background: rgba(0, 0, 0, 0.5); border: 2px solid #ef4444; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: bold; color: #ef4444; letter-spacing: 3px;">
                   ----
                 </div>
               </div>

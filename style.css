@@ -1,16 +1,16 @@
 :root {
-  --bg-dark: #0a0d14;
-  --panel-bg: rgba(18, 24, 38, 0.72);
-  --panel-border: rgba(255, 255, 255, 0.08);
-  --panel-border-glow: rgba(56, 189, 248, 0.2);
-  --primary: #38bdf8;
-  --primary-glow: rgba(56, 189, 248, 0.4);
-  --accent: #818cf8;
-  --text-main: #f1f5f9;
+  --bg-dark: #050508;
+  --panel-bg: rgba(18, 10, 14, 0.85);
+  --panel-border: rgba(239, 68, 68, 0.2);
+  --panel-border-glow: rgba(239, 68, 68, 0.5);
+  --primary: #ef4444;
+  --primary-glow: rgba(239, 68, 68, 0.6);
+  --accent: #dc2626;
+  --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --success: #34d399;
   --warning: #fbbf24;
-  --danger: #f87171;
+  --danger: #ef4444;
   --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
@@ -805,8 +805,8 @@ body, html {
   flex-direction: column;
   align-items: center;
   gap: 22px;
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  box-shadow: 0 0 60px rgba(56, 189, 248, 0.15), 0 20px 40px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 60px rgba(239, 68, 68, 0.25), 0 20px 50px rgba(0, 0, 0, 0.85);
   animation: modalScale 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -820,7 +820,7 @@ body, html {
 
 .hotel-emblem {
   font-size: 2.4rem;
-  filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.6));
+  filter: drop-shadow(0 0 16px rgba(239, 68, 68, 0.8));
   animation: pulse 2.5s infinite ease-in-out;
 }
 
@@ -1225,24 +1225,24 @@ body, html {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #38bdf8, #0284c7);
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+  background: linear-gradient(135deg, #ef4444, #991b1b);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .diff-range-slider::-webkit-slider-thumb:hover {
   transform: scale(1.2);
-  box-shadow: 0 0 14px rgba(56, 189, 248, 0.9);
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.9);
 }
 
 .diff-range-slider::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #38bdf8;
+  background: #ef4444;
   border: none;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
   cursor: pointer;
 }
 
@@ -1257,18 +1257,18 @@ body, html {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: linear-gradient(135deg, #38bdf8, #0284c7);
-  color: #030712;
-  border: none;
+  background: linear-gradient(135deg, #dc2626, #7f1d1d);
+  color: #ffffff;
+  border: 1px solid rgba(239, 68, 68, 0.4);
   cursor: pointer;
-  box-shadow: 0 8px 28px rgba(56, 189, 248, 0.4), 0 0 20px rgba(56, 189, 248, 0.3);
+  box-shadow: 0 8px 28px rgba(220, 38, 38, 0.5), 0 0 20px rgba(239, 68, 68, 0.4);
   transition: all 0.25s ease;
 }
 
 .btn-start-game:hover, .btn-start-game:focus {
   transform: translateY(-2px);
-  filter: brightness(1.15);
-  box-shadow: 0 12px 36px rgba(56, 189, 248, 0.6), 0 0 30px rgba(56, 189, 248, 0.5);
+  filter: brightness(1.2);
+  box-shadow: 0 12px 36px rgba(239, 68, 68, 0.7), 0 0 30px rgba(239, 68, 68, 0.6);
   outline: none;
 }
 
@@ -2415,8 +2415,8 @@ body, html {
   width: 52px;
   height: 52px;
   border-radius: 12px;
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(20, 8, 12, 0.75);
+  border: 1px solid rgba(239, 68, 68, 0.25);
   color: #f8fafc;
   display: flex;
   align-items: center;
@@ -2425,15 +2425,15 @@ body, html {
   cursor: pointer;
   position: relative;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
 }
 
 .btn-menu-icon:hover {
-  background: rgba(56, 189, 248, 0.2);
-  border-color: rgba(56, 189, 248, 0.6);
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.7);
   transform: translateY(-3px) scale(1.08);
-  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
 }
 
 .btn-menu-icon:active {
