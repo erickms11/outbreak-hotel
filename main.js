@@ -22,7 +22,7 @@ const BOUNDS = {
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020306);
-scene.fog = new THREE.FogExp2(0x020306, 0.125);
+scene.fog = new THREE.FogExp2(0x020306, 0.085);
 
 const camera = new THREE.PerspectiveCamera(
   60,
@@ -363,9 +363,12 @@ function playZombieHitSound() {
   return;
 }
 
-function playZombieGroanSound() {
+function playZombieGroanSound(dist = 0) {
   if (!AUDIO_ENABLED) return;
-  if (playBetterAudio('zombie_groan', 0.40)) return;
+  // Distância máxima cortada pela metade (3.25m) com atenuação suave por proximidade
+  const maxDist = 3.25;
+  const factor = dist > 0 ? Math.max(0.15, 1.0 - (dist / maxDist)) : 1.0;
+  if (playBetterAudio('zombie_groan', 0.35 * factor)) return;
   return;
 }
 
@@ -375,21 +378,23 @@ function playZombieDeathSound(isBoss = false) {
   return;
 }
 
-function playBossRoarSound() {
+function playBossRoarSound(dist = 0) {
   if (!AUDIO_ENABLED) return;
-  if (playBetterAudio('boss_roar', 0.40)) return;
+  const maxDist = 4.0;
+  const factor = dist > 0 ? Math.max(0.2, 1.0 - (dist / maxDist)) : 1.0;
+  if (playBetterAudio('boss_roar', 0.40 * factor)) return;
   return;
 }
 
 // --- SISTEMA DE ILUMINAÇÃO GERAL E POR AMBIENTE ---
-const ambientLight = new THREE.AmbientLight(0x1e293b, 0.22);
+const ambientLight = new THREE.AmbientLight(0x334155, 0.40);
 scene.add(ambientLight);
 
-const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.15);
+const hemiLight = new THREE.HemisphereLight(0x7dd3fc, 0x1e293b, 0.28);
 hemiLight.position.set(0, 20, 0);
 scene.add(hemiLight);
 
-const dirLight = new THREE.DirectionalLight(0xfff5ea, 0.18);
+const dirLight = new THREE.DirectionalLight(0xfff5ea, 0.32);
 dirLight.position.set(15, 22, 12);
 dirLight.shadow.camera.near = 0.5;
 dirLight.shadow.camera.far = 50;
@@ -3077,7 +3082,7 @@ playerGroup.add(fallbackPlayerMesh);
 let playerBody = fallbackPlayerMesh;
 
 // Iluminação omnidirecional ao redor do personagem (área imediata clara e nítida em 360°)
-const playerLight = new THREE.PointLight(0xfff0e2, 5.5, 11.0, 1.1);
+const playerLight = new THREE.PointLight(0xfff0e2, 6.5, 13.0, 1.1);
 playerLight.position.set(0, 0.85, 0);
 playerGroup.add(playerLight);
 
@@ -4779,7 +4784,7 @@ function exitTestRoomMode() {
   stopGameplayBGM();
   playMenuBGM();
 
-  if (scene.fog) scene.fog.density = 0.215;
+  if (scene.fog) scene.fog.density = 0.085;
   isGameStarted = false;
   isGamePaused = false;
 
@@ -5845,15 +5850,15 @@ function animate(currentTime = performance.now()) {
     }
 
     // Sons de gemido e rugido dos zumbis e do boss:
-    // APENAS após se mexerem pela primeira vez (hasMoved) e quando estiverem próximos ao jogador (< 6.5m)
-    if (enemy.hasMoved && !enemy.isDead && distToPlayer < 6.5) {
+    // Distância cortada pela metade (< 3.25m) para que só emitam sons quando estiverem bem próximos
+    if (enemy.hasMoved && !enemy.isDead && distToPlayer < 3.25) {
       enemy.groanTimer -= delta;
       if (enemy.groanTimer <= 0) {
         if (enemy.isBoss) {
-          if (Math.random() < 0.35) playBossRoarSound();
-          else playZombieGroanSound();
+          if (Math.random() < 0.35) playBossRoarSound(distToPlayer);
+          else playZombieGroanSound(distToPlayer);
         } else {
-          playZombieGroanSound();
+          playZombieGroanSound(distToPlayer);
         }
         enemy.groanTimer = Math.random() * 5.0 + 3.5;
       }
