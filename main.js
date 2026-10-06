@@ -445,6 +445,18 @@ function updateGraphicsUIBadges() {
     mainBadge.style.borderColor = badgeColor;
   }
 
+  let descText = '⚖️ Resolução balanceada com sombras e iluminação suaves.';
+  if (currentGraphicsProfile === 'performance') {
+    descText = '⚡ Máxima Fluidez: Resolução adaptativa (0.95x), sombras leves e menor aquecimento em celulares e tablets.';
+  } else if (currentGraphicsProfile === 'quality') {
+    descText = '✨ Qualidade Máxima: Resolução total nítida (1.25x), sombras detalhadas e alta fidelidade visual (para PCs).';
+  }
+
+  const mainDesc = document.getElementById('main-graphics-desc-text');
+  if (mainDesc) mainDesc.textContent = descText;
+  const pauseDesc = document.getElementById('pause-graphics-desc-text');
+  if (pauseDesc) pauseDesc.textContent = descText;
+
   // Atualiza botões ativos nos menus
   document.querySelectorAll('.btn-preset-graphics, .btn-preset-graphics-main').forEach(btn => {
     if (btn.getAttribute('data-gpreset') === currentGraphicsProfile) {
@@ -1497,12 +1509,12 @@ function createCollectibleWeapon(id, name, x, y, z, color, roomName) {
     const grip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.06), new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.5 }));
     grip.position.set(-0.1, -0.1, 0); grip.rotation.z = -0.3; weaponGroup.add(grip);
   } else {
-    const barrel1 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.8, 16), mat);
-    barrel1.rotation.z = Math.PI / 2; barrel1.position.set(0.2, 0.03, 0); weaponGroup.add(barrel1);
-    const barrel2 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.8, 16), mat);
-    barrel2.rotation.z = Math.PI / 2; barrel2.position.set(0.2, -0.03, 0); weaponGroup.add(barrel2);
-    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.08), new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.5 }));
-    stock.position.set(-0.3, -0.05, 0); weaponGroup.add(stock);
+    const barrel1 = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.64, 16), mat);
+    barrel1.rotation.z = Math.PI / 2; barrel1.position.set(0.16, 0.024, 0); weaponGroup.add(barrel1);
+    const barrel2 = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.64, 16), mat);
+    barrel2.rotation.z = Math.PI / 2; barrel2.position.set(0.16, -0.024, 0); weaponGroup.add(barrel2);
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.096, 0.064), new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.5 }));
+    stock.position.set(-0.24, -0.04, 0); weaponGroup.add(stock);
   }
 
   const haloMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
@@ -3338,6 +3350,7 @@ assetManager.manager.onLoad = () => {
   orbitControls.enabled = true;
   orbitControls.autoRotate = true;
   orbitControls.autoRotateSpeed = 1.0;
+  updateMenuViewOffset();
 
   playerWeaponGroup.position.set(0, 0, 0);
   playerWeaponGroup.rotation.set(Math.PI / 2, Math.PI / 2, 0); // Ajuste Mixamo
@@ -3378,8 +3391,8 @@ assetManager.manager.onLoad = () => {
     } else if (wObj.id === 'shotgun' && assetManager.models['shotgun']) {
       wObj.group.children.forEach(ch => { if (ch.isMesh && (!ch.geometry || ch.geometry.type !== 'RingGeometry')) ch.visible = false; });
       const sModel = assetManager.models['shotgun'].clone();
-      // Tamanho do item Shotgun reduzido em 10% (0.04 -> 0.036)
-      sModel.scale.set(0.036, 0.036, 0.036);
+      // Tamanho do item Shotgun reduzido em 20% para exibição como item coletável no chão (0.036 -> 0.0288)
+      sModel.scale.set(0.0288, 0.0288, 0.0288);
       sModel.position.set(0, 0.15, 0);
       wObj.group.add(sModel);
     }
@@ -3805,6 +3818,17 @@ const touchLookZone = document.getElementById('touch-look-zone');
 const btnTouchShoot = document.getElementById('btn-touch-shoot');
 const btnTouchAim = document.getElementById('btn-touch-aim');
 const btnTouchInteract = document.getElementById('btn-touch-interact');
+const btnTouchInteractIcon = btnTouchInteract ? btnTouchInteract.querySelector('.btn-icon') : null;
+const btnTouchInteractLabel = btnTouchInteract ? btnTouchInteract.querySelector('.btn-label') : null;
+let currentTouchInteractMode = '';
+
+function setTouchInteractState(icon, label, modeKey) {
+  if (currentTouchInteractMode === modeKey) return;
+  currentTouchInteractMode = modeKey;
+  if (btnTouchInteractIcon) btnTouchInteractIcon.textContent = icon;
+  if (btnTouchInteractLabel) btnTouchInteractLabel.textContent = label;
+}
+
 const btnTouchReload = document.getElementById('btn-touch-reload');
 const btnTouchHeal = document.getElementById('btn-touch-heal');
 const btnTouchJump = document.getElementById('btn-touch-jump');
@@ -3812,6 +3836,27 @@ const btnTouchSwap = document.getElementById('btn-touch-swap');
 const btnTouchRun = document.getElementById('btn-touch-run');
 const touchHealCount = document.getElementById('touch-heal-count');
 const mobileModeTag = document.getElementById('mobile-mode-tag');
+
+function updateMenuViewOffset() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const isMobile = checkIsMobileDevice() || forceMobileMode;
+  if (!isGameStarted) {
+    // Desloca a projeção do Three.js para que o modelo 3D do personagem apareça no lado direito da tela,
+    // liberando o lado esquerdo completamente para o card do menu inicial
+    const isLandscape = w >= h;
+    const shiftRatio = isMobile ? (isLandscape ? 0.24 : 0.0) : 0.16;
+    if (shiftRatio > 0 && camera.setViewOffset) {
+      camera.setViewOffset(w, h, -Math.round(w * shiftRatio), 0, w, h);
+    } else {
+      if (camera.clearViewOffset) camera.clearViewOffset();
+    }
+  } else {
+    if (camera.clearViewOffset) camera.clearViewOffset();
+  }
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
 
 function updateRendererPerformanceSettings() {
   applyGraphicsProfile(currentGraphicsProfile);
@@ -4752,6 +4797,7 @@ function exitTestRoomMode() {
 
   orbitControls.enabled = true;
   orbitControls.autoRotate = true;
+  updateMenuViewOffset();
   updateMobileControlsVisibility();
 }
 
@@ -4760,6 +4806,7 @@ function startGame() {
   isTestRoomMode = false;
   if (testRoomGroup) testRoomGroup.visible = false;
   isGameStarted = true;
+  updateMenuViewOffset();
   toggleRoomEnvironmentLight('corridor', true);
 
   try {
@@ -4904,6 +4951,7 @@ if (btnGameOverRestart) {
     orbitControls.autoRotate = true;
     orbitControls.autoRotateSpeed = 1.0;
     orbitControls.update();
+    updateMenuViewOffset();
 
     const permHud = document.getElementById('permanent-weapon-hud');
     if (permHud) permHud.classList.add('hidden');
@@ -6676,21 +6724,27 @@ function animate(currentTime = performance.now()) {
     if (nearInteractive.type === 'medkit') {
       const m = nearInteractive.medObj;
       if (promptText) promptText.textContent = `Pegar Medicamento 💊 em ${m.roomName} (E)`;
+      setTouchInteractState('🖐️', 'PEGAR', 'medkit');
     } else if (nearInteractive.type === 'weapon') {
       const w = nearInteractive.wObj;
       if (promptText) promptText.textContent = `Coletar ${w.name} em ${w.roomName} (E)`;
+      setTouchInteractState('🖐️', 'PEGAR', 'weapon');
     } else if (nearInteractive.type === 'ammo') {
       const a = nearInteractive.aObj;
       if (promptText) promptText.textContent = `Pegar Munição de ${a.type === 'revolver' ? 'Revólver' : 'Shotgun'} (+${a.amount}) (E)`;
+      setTouchInteractState('🖐️', 'PEGAR', 'ammo');
     } else if (nearInteractive.type === 'key') {
       const k = nearInteractive.keyObj.def;
       if (promptText) promptText.textContent = `Pegar ${k.name} em ${k.roomName} (E)`;
+      setTouchInteractState('🖐️', 'PEGAR', 'key');
     } else if (nearInteractive.type === 'exitGate') {
       const g = nearInteractive.gate;
       if (!acquiredKeys.has('key_master')) {
         if (promptText) promptText.textContent = `🔒 PORTA MESTRE TRANCADA (Requer Chave Mestre)`;
+        setTouchInteractState('🔒', 'TRANCADO', 'gate_locked');
       } else {
         if (promptText) promptText.textContent = g.isOpen ? `Fechar Porta Mestre (E)` : `Abrir PORTA MESTRE e Escapar! (E)`;
+        setTouchInteractState('🚪', g.isOpen ? 'FECHAR' : 'ESCAPAR', g.isOpen ? 'gate_open' : 'gate_escape');
       }
     } else if (nearInteractive.type === 'door') {
       const d = nearInteractive.door;
@@ -6698,15 +6752,19 @@ function animate(currentTime = performance.now()) {
         const reqKey = KEY_DEFS.find(k => k.id === d.requiredKey);
         const kName = reqKey ? reqKey.name : `Chave Q.${d.roomNumber}`;
         if (promptText) promptText.textContent = `🔒 Porta ${d.roomNumber} Trancada (Requer ${kName})`;
+        setTouchInteractState('🔒', 'TRANCADO', 'door_locked');
       } else {
         if (promptText) promptText.textContent = d.isOpen ? `Fechar Porta ${d.roomNumber} (${d.name}) (E)` : `Abrir Porta ${d.roomNumber} (${d.name}) (E)`;
+        setTouchInteractState('🚪', d.isOpen ? 'FECHAR' : 'ABRIR', d.isOpen ? 'door_open' : 'door_closed');
       }
     } else if (nearInteractive.type === 'switch') {
       const env = nearInteractive.env;
       if (promptText) promptText.textContent = env.isLit ? `Apagar Luz do ${env.name} (E)` : `Acender Luz do ${env.name} (E)`;
+      setTouchInteractState('💡', env.isLit ? 'APAGAR' : 'ACENDER', env.isLit ? 'switch_lit' : 'switch_unlit');
     }
   } else {
     if (interactionPrompt) interactionPrompt.classList.add('hidden');
+    setTouchInteractState('🖐️', 'PEGAR', 'default');
   }
 
   // Telemetria
@@ -6730,8 +6788,7 @@ function animate(currentTime = performance.now()) {
 }
 
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+  updateMenuViewOffset();
   applyGraphicsProfile(currentGraphicsProfile);
 });
 

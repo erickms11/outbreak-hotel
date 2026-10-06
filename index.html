@@ -151,9 +151,9 @@
 
         <!-- Grupo Principal de Ação Ergonomicamente Disposto (Abrir/Interagir e Atirar com Mira Automática) -->
         <div class="action-main-row">
-          <button id="btn-touch-interact" class="mobile-btn mobile-btn-interact" title="Interagir / Abrir Porta (E)">
-            <span class="btn-icon">🚪</span>
-            <span class="btn-label">ABRIR</span>
+          <button id="btn-touch-interact" class="mobile-btn mobile-btn-interact" title="Interagir / Pegar / Abrir (E)">
+            <span class="btn-icon">🖐️</span>
+            <span class="btn-label">PEGAR</span>
           </button>
           <button id="btn-touch-shoot" class="mobile-btn mobile-btn-shoot mobile-btn-shoot-autoaim" title="Atirar (Mira Automática)">
             <span class="btn-icon">💥</span>
@@ -395,28 +395,33 @@
               <span id="main-current-graphics-badge" class="difficulty-badge normal" style="border-color: #38bdf8; color: #38bdf8;">⚖️ EQUILIBRADO</span>
             </div>
 
-            <div class="preset-buttons-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 16px;">
+            <div class="preset-buttons-grid">
               <button type="button" class="btn-preset-graphics-main" data-gpreset="performance">
                 <span class="preset-emoji">⚡</span>
                 <span class="preset-name">Performance</span>
-                <small style="font-size: 0.65rem; opacity: 0.8;">Máx. FPS</small>
+                <small>Máx. FPS</small>
               </button>
               <button type="button" class="btn-preset-graphics-main active" data-gpreset="balanced">
                 <span class="preset-emoji">⚖️</span>
                 <span class="preset-name">Equilibrado</span>
-                <small style="font-size: 0.65rem; opacity: 0.8;">Recomendado</small>
+                <small>Recomendado</small>
               </button>
               <button type="button" class="btn-preset-graphics-main" data-gpreset="quality">
                 <span class="preset-emoji">✨</span>
                 <span class="preset-name">Qualidade</span>
-                <small style="font-size: 0.65rem; opacity: 0.8;">Para PC</small>
+                <small>Para PC</small>
               </button>
             </div>
 
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-              <div style="display: flex; flex-direction: column; gap: 2px;">
-                <strong style="color: #f8fafc; font-size: 0.9rem;">🔒 Travar a 60 FPS</strong>
-                <span style="font-size: 0.75rem; color: #94a3b8;">Evita superaquecimento em telas 120Hz (iPhone/Tab S7)</span>
+            <!-- Resumo Explicativo do Perfil Selecionado -->
+            <div class="graphics-profile-desc-box">
+              <span id="main-graphics-desc-text">⚖️ Resolução balanceada com sombras e iluminação suaves.</span>
+            </div>
+
+            <div class="graphics-toggle-row">
+              <div class="graphics-toggle-info">
+                <strong>🔒 Travar a 60 FPS</strong>
+                <span>Evita superaquecimento em telas 120Hz (iPhone/Tab S7)</span>
               </div>
               <button type="button" id="btn-toggle-60fps-main" class="btn-toggle-switch active" style="padding: 6px 14px; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid #38bdf8; background: rgba(56, 189, 248, 0.25); color: #38bdf8;">LIGADO</button>
             </div>
@@ -614,28 +619,33 @@
               <span id="pause-current-graphics-badge" class="difficulty-badge normal" style="border-color: #38bdf8; color: #38bdf8;">⚖️ EQUILIBRADO</span>
             </div>
 
-            <div class="preset-buttons-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 16px;">
+            <div class="preset-buttons-grid">
               <button type="button" class="btn-preset-graphics" data-gpreset="performance">
                 <span class="preset-emoji">⚡</span>
                 <span class="preset-name">Performance</span>
-                <small style="font-size: 0.65rem; opacity: 0.8;">Máx. FPS</small>
+                <small>Máx. FPS</small>
               </button>
               <button type="button" class="btn-preset-graphics active" data-gpreset="balanced">
                 <span class="preset-emoji">⚖️</span>
                 <span class="preset-name">Equilibrado</span>
-                <small style="font-size: 0.65rem; opacity: 0.8;">Recomendado</small>
+                <small>Recomendado</small>
               </button>
               <button type="button" class="btn-preset-graphics" data-gpreset="quality">
                 <span class="preset-emoji">✨</span>
                 <span class="preset-name">Qualidade</span>
-                <small style="font-size: 0.65rem; opacity: 0.8;">Para PC</small>
+                <small>Para PC</small>
               </button>
             </div>
 
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-              <div style="display: flex; flex-direction: column; gap: 2px;">
-                <strong style="color: #f8fafc; font-size: 0.9rem;">🔒 Travar a 60 FPS</strong>
-                <span style="font-size: 0.75rem; color: #94a3b8;">Evita superaquecimento em telas 120Hz (iPhone/Tab S7)</span>
+            <!-- Resumo Explicativo do Perfil Selecionado -->
+            <div class="graphics-profile-desc-box">
+              <span id="pause-graphics-desc-text">⚖️ Resolução balanceada com sombras e iluminação suaves.</span>
+            </div>
+
+            <div class="graphics-toggle-row">
+              <div class="graphics-toggle-info">
+                <strong>🔒 Travar a 60 FPS</strong>
+                <span>Evita superaquecimento em telas 120Hz (iPhone/Tab S7)</span>
               </div>
               <button type="button" id="btn-toggle-60fps-pause" class="btn-toggle-switch active" style="padding: 6px 14px; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid #38bdf8; background: rgba(56, 189, 248, 0.25); color: #38bdf8;">LIGADO</button>
             </div>
