@@ -3346,8 +3346,10 @@ function applyCharacterOutfit(charKey, outfitNum) {
   if (outfitNum >= 2) {
     const candidatePaths = [
       `assets/models/${charKey}/${charKey}_outfit${outfitNum}.fbx`,
+      `assets/models/${charKey}/Pending/${charKey}_outfit${outfitNum}.fbx`,
       `assets/models/${charKey}_outfit${outfitNum}.fbx`,
       `assets/models/${charKey}/${charKey}_outfit_${outfitNum}.fbx`,
+      `assets/models/${charKey}/Pending/${charKey}_outfit_${outfitNum}.fbx`,
       `assets/models/${charKey}/outfit_${outfitNum}.fbx`,
       `assets/models/${charKey}/outfit${outfitNum}.fbx`
     ];
@@ -3426,9 +3428,18 @@ function updateActiveCharacterModel() {
 
     if (currentOutfitData.rightHand) {
       currentOutfitData.rightHand.add(playerWeaponGroup);
+      playerWeaponGroup.position.set(0, 0, 0);
+      playerWeaponGroup.rotation.set(Math.PI / 2, Math.PI / 2, 0); // Alinhamento Mixamo
+    } else {
+      playerGroup.add(playerWeaponGroup);
+      playerWeaponGroup.position.set(0.35, 0.25, 0.45);
+      playerWeaponGroup.rotation.set(0, 0, 0);
     }
     if (fallbackPlayerMesh) fallbackPlayerMesh.visible = false;
   } else {
+    playerGroup.add(playerWeaponGroup);
+    playerWeaponGroup.position.set(0.35, 0.25, 0.45);
+    playerWeaponGroup.rotation.set(0, 0, 0);
     if (fallbackPlayerMesh) {
       fallbackPlayerMesh.visible = true;
       playerBody = fallbackPlayerMesh;
@@ -3572,29 +3583,42 @@ assetManager.manager.onLoad = () => {
   playerWeaponGroup.position.set(0, 0, 0);
   playerWeaponGroup.rotation.set(Math.PI / 2, Math.PI / 2, 0); // Ajuste Mixamo
 
+  // Calibração do Revólver na mão (mixamorigRightHand)
   const PISTOL_ROT_X = THREE.MathUtils.degToRad(-70);
   const PISTOL_ROT_Y = THREE.MathUtils.degToRad(90);
   const PISTOL_ROT_Z = THREE.MathUtils.degToRad(180);
   const PISTOL_POS_X = 15;
   const PISTOL_POS_Y = -2;
   const PISTOL_POS_Z = 8;
+  const PISTOL_SCALE = 1.25;
+
+  // Calibração da Shotgun na mão (orientação corrigida com cano para a frente e empunhadura alinhada)
+  const SHOTGUN_ROT_X = THREE.MathUtils.degToRad(-70);
+  const SHOTGUN_ROT_Y = THREE.MathUtils.degToRad(-90); // Inversão em Y necessária pois o modelo aponta para -Z
+  const SHOTGUN_ROT_Z = THREE.MathUtils.degToRad(180);
+  const SHOTGUN_POS_X = 15;
+  const SHOTGUN_POS_Y = -2;
+  const SHOTGUN_POS_Z = 8;
+  const SHOTGUN_SCALE = 0.85;
 
   if (assetManager.models['pistol']) {
     const pModel = assetManager.models['pistol'].clone();
     weaponInventory.revolver.mesh.children.forEach(ch => ch.visible = false);
-    pModel.scale.set(1.25, 1.25, 1.25);
+    pModel.scale.set(PISTOL_SCALE, PISTOL_SCALE, PISTOL_SCALE);
     pModel.rotation.set(PISTOL_ROT_X, PISTOL_ROT_Y, PISTOL_ROT_Z);
     pModel.position.set(PISTOL_POS_X, PISTOL_POS_Y, PISTOL_POS_Z);
     weaponInventory.revolver.mesh.add(pModel);
+    weaponInventory.revolver.glModel = pModel;
   }
 
   if (assetManager.models['shotgun']) {
     const sModel = assetManager.models['shotgun'].clone();
     weaponInventory.shotgun.mesh.children.forEach(ch => ch.visible = false);
-    sModel.scale.set(0.85, 0.85, 0.85);
-    sModel.rotation.set(PISTOL_ROT_X, PISTOL_ROT_Y, PISTOL_ROT_Z);
-    sModel.position.set(PISTOL_POS_X, PISTOL_POS_Y, PISTOL_POS_Z);
+    sModel.scale.set(SHOTGUN_SCALE, SHOTGUN_SCALE, SHOTGUN_SCALE);
+    sModel.rotation.set(SHOTGUN_ROT_X, SHOTGUN_ROT_Y, SHOTGUN_ROT_Z);
+    sModel.position.set(SHOTGUN_POS_X, SHOTGUN_POS_Y, SHOTGUN_POS_Z);
     weaponInventory.shotgun.mesh.add(sModel);
+    weaponInventory.shotgun.glModel = sModel;
   }
 
   // --- ATUALIZAÇÃO DE ARMAS COLETÁVEIS NO CHÃO ---
@@ -3655,13 +3679,14 @@ assetManager.manager.onLoad = () => {
       }
       if (c.isCamera || c.isLight) toRemove.push(c);
       if (c.isBone && c.name) {
-        c.name = c.name.replace(/.*mixamorig/g, 'mixamorig');
+        c.name = c.name.replace(/.*mixamorig:?/gi, 'mixamorig');
         // Se a personagem tiver ossos sem o prefixo padrão do Mixamo, nós adicionamos
         if (!c.name.startsWith('mixamorig')) {
           c.name = 'mixamorig' + c.name.charAt(0).toUpperCase() + c.name.slice(1);
         }
-        const lowerBone = c.name.toLowerCase();
-        if (lowerBone === 'mixamorigrighthand' || lowerBone.includes('righthand')) {
+        const cleanBoneName = c.name.replace(/^mixamorig:?/i, '').toLowerCase();
+        // Apenas a mão direita raiz (pulso/palma), NUNCA os ossos dos dedos (Thumb, Index, Middle, etc)
+        if (cleanBoneName === 'righthand') {
           rightHand = c;
         }
       }
@@ -7317,5 +7342,21 @@ toggleRoomEnvironmentLight('corridor', true);
 animate();
 
 window.__HOTEL_3D__ = {
-  scene, camera, playerGroup, velocity, roomEnvironments, toggleRoomEnvironmentLight, acquiredKeys, keyObjects, weaponInventory, equipWeapon, fireActiveWeapon, reloadActiveWeapon, useMedkit, damagePlayer, activeEnemies, collectibleMedkits, resetGameState, toggleHUD, clearRoomFog, gameDifficulty, applyDifficultySettings
+  scene, camera, playerGroup, velocity, roomEnvironments, toggleRoomEnvironmentLight, acquiredKeys, keyObjects, weaponInventory, equipWeapon, fireActiveWeapon, reloadActiveWeapon, useMedkit, damagePlayer, activeEnemies, collectibleMedkits, resetGameState, toggleHUD, clearRoomFog, gameDifficulty, applyDifficultySettings,
+  calibrateWeapon: (weaponId = 'revolver', opts = {}) => {
+    const inv = weaponInventory[weaponId];
+    if (!inv || !inv.glModel) {
+      console.warn('Arma não encontrada ou modelo 3D não carregado:', weaponId);
+      return;
+    }
+    const m = inv.glModel;
+    if (opts.x !== undefined) m.position.x = opts.x;
+    if (opts.y !== undefined) m.position.y = opts.y;
+    if (opts.z !== undefined) m.position.z = opts.z;
+    if (opts.rotX !== undefined) m.rotation.x = THREE.MathUtils.degToRad(opts.rotX);
+    if (opts.rotY !== undefined) m.rotation.y = THREE.MathUtils.degToRad(opts.rotY);
+    if (opts.rotZ !== undefined) m.rotation.z = THREE.MathUtils.degToRad(opts.rotZ);
+    if (opts.scale !== undefined) m.scale.set(opts.scale, opts.scale, opts.scale);
+    console.log(`[Calibração: ${weaponId}] Pos: (${m.position.x.toFixed(2)}, ${m.position.y.toFixed(2)}, ${m.position.z.toFixed(2)}) | Rot Deg: (${THREE.MathUtils.radToDeg(m.rotation.x).toFixed(1)}°, ${THREE.MathUtils.radToDeg(m.rotation.y).toFixed(1)}°, ${THREE.MathUtils.radToDeg(m.rotation.z).toFixed(1)}°) | Scale: ${m.scale.x.toFixed(2)}`);
+  }
 };
