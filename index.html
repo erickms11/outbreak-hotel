@@ -245,6 +245,10 @@
                 <span class="btn-icon">⛶</span>
               </button>
 
+              <button id="btn-open-graphics-main" class="btn-menu-icon" title="Gráficos & Desempenho ⚡" aria-label="Desempenho">
+                <span class="btn-icon">⚡</span>
+              </button>
+
               <button id="btn-pwa-install" class="btn-menu-icon" title="Instalar App / PWA (Tablet, Celular e PC)" aria-label="Instalar App">
                 <span class="btn-icon">🏨</span>
               </button>
@@ -374,6 +378,55 @@
           </button>
         </div>
 
+        <!-- TELA GRÁFICOS: Desempenho & Otimização -->
+        <div id="menu-screen-graphics" class="menu-screen hidden">
+          <div class="menu-header compact">
+            <div class="diff-header-icon">⚡</div>
+            <h2>GRÁFICOS & PERFORMANCE</h2>
+            <p class="menu-tagline">Otimize para fluidez máxima no celular e tablet</p>
+          </div>
+
+          <div class="menu-difficulty-section">
+            <div class="difficulty-section-header">
+              <span class="diff-title-row">
+                <span class="diff-title-icon">🎮</span>
+                <strong>Perfil Atual:</strong>
+              </span>
+              <span id="main-current-graphics-badge" class="difficulty-badge normal" style="border-color: #38bdf8; color: #38bdf8;">⚖️ EQUILIBRADO</span>
+            </div>
+
+            <div class="preset-buttons-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 16px;">
+              <button type="button" class="btn-preset-graphics-main" data-gpreset="performance">
+                <span class="preset-emoji">⚡</span>
+                <span class="preset-name">Performance</span>
+                <small style="font-size: 0.65rem; opacity: 0.8;">Máx. FPS</small>
+              </button>
+              <button type="button" class="btn-preset-graphics-main active" data-gpreset="balanced">
+                <span class="preset-emoji">⚖️</span>
+                <span class="preset-name">Equilibrado</span>
+                <small style="font-size: 0.65rem; opacity: 0.8;">Recomendado</small>
+              </button>
+              <button type="button" class="btn-preset-graphics-main" data-gpreset="quality">
+                <span class="preset-emoji">✨</span>
+                <span class="preset-name">Qualidade</span>
+                <small style="font-size: 0.65rem; opacity: 0.8;">Para PC</small>
+              </button>
+            </div>
+
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <strong style="color: #f8fafc; font-size: 0.9rem;">🔒 Travar a 60 FPS</strong>
+                <span style="font-size: 0.75rem; color: #94a3b8;">Evita superaquecimento em telas 120Hz (iPhone/Tab S7)</span>
+              </div>
+              <button type="button" id="btn-toggle-60fps-main" class="btn-toggle-switch active" style="padding: 6px 14px; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid #38bdf8; background: rgba(56, 189, 248, 0.25); color: #38bdf8;">LIGADO</button>
+            </div>
+          </div>
+
+          <button id="btn-back-graphics-main" class="btn-menu-back">
+            <span>◀ VOLTAR AO MENU PRINCIPAL</span>
+          </button>
+        </div>
+
         <!-- TELA 3: Missão e Controles -->
         <div id="menu-screen-instructions" class="menu-screen hidden">
           <div class="menu-header compact">
@@ -463,6 +516,12 @@
               <span id="pause-diff-tag" class="diff-tag-pill">NORMAL (1.0x)</span>
             </button>
 
+            <button id="btn-pause-graphics" class="btn-menu-secondary">
+              <span class="btn-icon">⚡</span>
+              <span class="btn-label">Gráficos & Desempenho</span>
+              <span id="pause-graphics-tag" class="diff-tag-pill" style="background: rgba(56, 189, 248, 0.25); color: #38bdf8;">EQUILIBRADO</span>
+            </button>
+
             <button id="btn-pause-restart" class="btn-menu-secondary btn-danger-action">
               <span class="btn-icon">🔄</span>
               <span class="btn-label">Reiniciar Partida</span>
@@ -534,6 +593,55 @@
           </div>
 
           <button id="btn-back-from-pause-diff" class="btn-menu-back">
+            <span>◀ VOLTAR À PAUSA</span>
+          </button>
+        </div>
+
+        <!-- TELA 3 DE PAUSA: Desempenho e Gráficos -->
+        <div id="pause-screen-graphics" class="pause-screen hidden">
+          <div class="menu-header compact">
+            <div class="diff-header-icon">⚡</div>
+            <h2>GRÁFICOS & PERFORMANCE</h2>
+            <p class="menu-tagline">Otimize para fluidez máxima no celular e tablet</p>
+          </div>
+
+          <div class="menu-difficulty-section">
+            <div class="difficulty-section-header">
+              <span class="diff-title-row">
+                <span class="diff-title-icon">🎮</span>
+                <strong>Perfil Atual:</strong>
+              </span>
+              <span id="pause-current-graphics-badge" class="difficulty-badge normal" style="border-color: #38bdf8; color: #38bdf8;">⚖️ EQUILIBRADO</span>
+            </div>
+
+            <div class="preset-buttons-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 16px;">
+              <button type="button" class="btn-preset-graphics" data-gpreset="performance">
+                <span class="preset-emoji">⚡</span>
+                <span class="preset-name">Performance</span>
+                <small style="font-size: 0.65rem; opacity: 0.8;">Máx. FPS</small>
+              </button>
+              <button type="button" class="btn-preset-graphics active" data-gpreset="balanced">
+                <span class="preset-emoji">⚖️</span>
+                <span class="preset-name">Equilibrado</span>
+                <small style="font-size: 0.65rem; opacity: 0.8;">Recomendado</small>
+              </button>
+              <button type="button" class="btn-preset-graphics" data-gpreset="quality">
+                <span class="preset-emoji">✨</span>
+                <span class="preset-name">Qualidade</span>
+                <small style="font-size: 0.65rem; opacity: 0.8;">Para PC</small>
+              </button>
+            </div>
+
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <strong style="color: #f8fafc; font-size: 0.9rem;">🔒 Travar a 60 FPS</strong>
+                <span style="font-size: 0.75rem; color: #94a3b8;">Evita superaquecimento em telas 120Hz (iPhone/Tab S7)</span>
+              </div>
+              <button type="button" id="btn-toggle-60fps-pause" class="btn-toggle-switch active" style="padding: 6px 14px; border-radius: 20px; font-weight: 600; cursor: pointer; border: 1px solid #38bdf8; background: rgba(56, 189, 248, 0.25); color: #38bdf8;">LIGADO</button>
+            </div>
+          </div>
+
+          <button id="btn-back-from-pause-graphics" class="btn-menu-back">
             <span>◀ VOLTAR À PAUSA</span>
           </button>
         </div>

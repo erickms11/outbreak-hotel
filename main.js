@@ -35,13 +35,46 @@ const camera = new THREE.PerspectiveCamera(
 const audioListener = new THREE.AudioListener();
 camera.add(audioListener);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// --- SISTEMA AVANÇADO DE DETECÇÃO E PERFORMANCE (IPHONE & TABLETS ANDROID) ---
+function checkIsMobileDevice() {
+  const userAgent = navigator.userAgent || '';
+  const isAndroidOrIOS = /Android|iPhone|iPad|iPod/i.test(userAgent);
+  const isMacTouch = /Macintosh/i.test(userAgent) && (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
+  const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+  const isPointerCoarse = window.matchMedia && (window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(any-pointer: coarse)').matches);
+  const isMobileUAData = navigator.userAgentData && (navigator.userAgentData.mobile || /Android/i.test(navigator.userAgentData.platform || ''));
+  // Detecta tablets Android em modo Desktop no Chrome (Linux x86_64 / arm64 com tela de toque, como Tab S7)
+  const isLinuxTouchTablet = /Linux/i.test(userAgent) && hasTouch;
+
+  return isAndroidOrIOS || isMacTouch || isMobileUAData || isLinuxTouchTablet || (hasTouch && isPointerCoarse) || (hasTouch && Math.min(window.innerWidth, window.innerHeight) <= 1024);
+}
+
+let isMobileDevice = checkIsMobileDevice();
+let forceMobileMode = false;
+let isMobileCameraMode = true;
+
+// Perfis Gráficos: 'performance' (60 FPS/Max fluidez), 'balanced' (Equilibrado), 'quality' (Alta definição/PC)
+let currentGraphicsProfile = localStorage.getItem('outbreak_graphics_profile');
+if (!currentGraphicsProfile) {
+  currentGraphicsProfile = isMobileDevice ? 'balanced' : 'quality';
+}
+
+// Opção para travar em 60 FPS (Vital em telas 120Hz do iPhone 15 Pro e Galaxy Tab S7 para evitar sobreaquecimento e throttling)
+let limit60FPS = localStorage.getItem('outbreak_limit_60fps');
+if (limit60FPS === null) {
+  limit60FPS = isMobileDevice; // Padrão ligado em celulares e tablets
+} else {
+  limit60FPS = limit60FPS === 'true';
+}
+
+// WebGL Renderer com otimizações de fillrate para telas Retina e AMOLED de alta densidade
+const renderer = new THREE.WebGLRenderer({
+  antialias: !isMobileDevice, // Desativa MSAA em telas ultra-densas Retina/OLED mobile, liberando grande banda de GPU
+  powerPreference: 'high-performance',
+  precision: isMobileDevice ? 'mediump' : 'highp'
+});
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.02; // Iluminação geral reduzida em 30%
+renderer.toneMappingExposure = 1.02;
 container.appendChild(renderer.domElement);
 
 // Controles Orbitais
@@ -358,9 +391,6 @@ scene.add(hemiLight);
 
 const dirLight = new THREE.DirectionalLight(0xfff5ea, 0.18);
 dirLight.position.set(15, 22, 12);
-dirLight.castShadow = true;
-dirLight.shadow.mapSize.width = 2048;
-dirLight.shadow.mapSize.height = 2048;
 dirLight.shadow.camera.near = 0.5;
 dirLight.shadow.camera.far = 50;
 const d = 25;
@@ -371,12 +401,114 @@ dirLight.shadow.camera.bottom = -d;
 dirLight.shadow.bias = -0.0004;
 scene.add(dirLight);
 
-// Luzes de Efeito de Combate (Pré-alocadas na cena com intensidade zero para evitar recompilação de shaders)
+// Luzes de Efeito de Combate (Pré-alocadas com visible=false para não gastar ciclos no fragment shader quando inativas)
 const combatFlashLight = new THREE.PointLight(0xfacc15, 0.0, 9.0);
+combatFlashLight.visible = false;
 scene.add(combatFlashLight);
 
 const combatImpactLight = new THREE.PointLight(0xef4444, 0.0, 6.0);
+combatImpactLight.visible = false;
 scene.add(combatImpactLight);
+
+function updateGraphicsUIBadges() {
+  const profileNames = {
+    performance: '⚡ PERFORMANCE',
+    balanced: '⚖️ EQUILIBRADO',
+    quality: '✨ QUALIDADE'
+  };
+  const profileColors = {
+    performance: '#10b981',
+    balanced: '#38bdf8',
+    quality: '#a855f7'
+  };
+
+  const badgeText = profileNames[currentGraphicsProfile] || '⚖️ EQUILIBRADO';
+  const badgeColor = profileColors[currentGraphicsProfile] || '#38bdf8';
+
+  const pauseTag = document.getElementById('pause-graphics-tag');
+  if (pauseTag) {
+    pauseTag.textContent = badgeText;
+    pauseTag.style.color = badgeColor;
+  }
+
+  const pauseBadge = document.getElementById('pause-current-graphics-badge');
+  if (pauseBadge) {
+    pauseBadge.textContent = badgeText;
+    pauseBadge.style.color = badgeColor;
+    pauseBadge.style.borderColor = badgeColor;
+  }
+
+  const mainBadge = document.getElementById('main-current-graphics-badge');
+  if (mainBadge) {
+    mainBadge.textContent = badgeText;
+    mainBadge.style.color = badgeColor;
+    mainBadge.style.borderColor = badgeColor;
+  }
+
+  // Atualiza botões ativos nos menus
+  document.querySelectorAll('.btn-preset-graphics, .btn-preset-graphics-main').forEach(btn => {
+    if (btn.getAttribute('data-gpreset') === currentGraphicsProfile) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Atualiza botões de 60 FPS
+  const update60Btn = (btn) => {
+    if (!btn) return;
+    if (limit60FPS) {
+      btn.textContent = 'LIGADO';
+      btn.classList.add('active');
+      btn.style.color = '#38bdf8';
+      btn.style.borderColor = '#38bdf8';
+      btn.style.background = 'rgba(56, 189, 248, 0.25)';
+    } else {
+      btn.textContent = 'DESLIGADO';
+      btn.classList.remove('active');
+      btn.style.color = '#94a3b8';
+      btn.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+      btn.style.background = 'rgba(255, 255, 255, 0.05)';
+    }
+  };
+  update60Btn(document.getElementById('btn-toggle-60fps-main'));
+  update60Btn(document.getElementById('btn-toggle-60fps-pause'));
+}
+
+function applyGraphicsProfile(profile) {
+  currentGraphicsProfile = profile;
+  try {
+    localStorage.setItem('outbreak_graphics_profile', profile);
+  } catch (e) {}
+
+  if (profile === 'performance') {
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 0.95));
+    renderer.shadowMap.enabled = false;
+    if (dirLight) dirLight.castShadow = false;
+  } else if (profile === 'balanced') {
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.15));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.BasicShadowMap;
+    if (dirLight) {
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.set(1024, 1024);
+    }
+  } else {
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    if (dirLight) {
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.set(2048, 2048);
+    }
+  }
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  updateGraphicsUIBadges();
+}
+
+// Aplica configuração gráfica inicial
+applyGraphicsProfile(currentGraphicsProfile);
 
 // Dicionário de Ambientes e Iluminação por Sala
 const roomEnvironments = {};
@@ -519,11 +651,13 @@ function createWallSwitch(envId, x, y, z, rotationY, labelText) {
   const switchLed = new THREE.Mesh(ledGeo, switchLedMat);
   switchLed.position.set(0, 0.18, 0.025);
   switchGroup.add(switchLed);
-  switchClickables.push(switchLed);
-
-  const switchLedLight = new THREE.PointLight(0xef4444, 1.1, 2.5);
-  switchLedLight.position.set(0, 0.18, 0.06);
-  switchGroup.add(switchLedLight);
+  // Otimização: o material emissivo switchLedMat já fornece o brilho visual exato. Luz pontual reservada apenas para PC Qualidade.
+  let switchLedLight = null;
+  if (!isMobileDevice && currentGraphicsProfile === 'quality') {
+    switchLedLight = new THREE.PointLight(0xef4444, 1.1, 2.5);
+    switchLedLight.position.set(0, 0.18, 0.06);
+    switchGroup.add(switchLedLight);
+  }
 
   const holoGroup = new THREE.Group();
   holoGroup.position.set(0, 0.48, 0.08);
@@ -694,14 +828,16 @@ scene.add(gridHelper);
 const wallsGroup = new THREE.Group();
 const wallColliders = [];
 const allWallMeshes = [];
+const mainWallMeshes = []; // Otimização: Apenas paredes principais para raycast de câmera (reduz raycast de 44 para 22)
 const cameraRaycaster = new THREE.Raycaster();
 
 function createWallSegment(w, h, d, x, y, z, wallName) {
+  // Otimização: Paredes iniciam como opacas para ativar o hardware de Early-Z / Tile Hidden Surface Removal das GPUs mobile
   const wallMat = new THREE.MeshStandardMaterial({
     color: 0x1e2638,
     roughness: 0.85,
     metalness: 0.1,
-    transparent: true,
+    transparent: false,
     opacity: 1.0,
   });
   const wallMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
@@ -710,13 +846,14 @@ function createWallSegment(w, h, d, x, y, z, wallName) {
   wallMesh.userData = { isWall: true, wallName, targetOpacity: 1.0 };
   wallsGroup.add(wallMesh);
   allWallMeshes.push(wallMesh);
+  mainWallMeshes.push(wallMesh);
 
   const trimHeight = 0.15;
   const trimMat = new THREE.MeshStandardMaterial({
     color: 0x38bdf8,
     emissive: 0x0284c7,
     emissiveIntensity: 0.4,
-    transparent: true,
+    transparent: false,
     opacity: 1.0,
   });
   const trim = new THREE.Mesh(new THREE.BoxGeometry(w === WALL_THICKNESS ? w + 0.04 : w, trimHeight, d === WALL_THICKNESS ? d + 0.04 : d), trimMat);
@@ -771,6 +908,7 @@ scene.add(wallsGroup);
 // --- SALA DE TESTES (SANDBOX LAB) ---
 let isTestRoomMode = false;
 const testRoomGroup = new THREE.Group();
+testRoomGroup.visible = false; // Otimização: Oculto por padrão na partida real para não processar luzes e malhas fora da visão
 const testRoomPuzzles = [];
 const testRoomDummies = [];
 const testRoomEnemies = [];
@@ -815,7 +953,7 @@ function createTestRoom() {
       color: 0x1e293b,
       roughness: 0.6,
       metalness: 0.3,
-      transparent: true,
+      transparent: false,
       opacity: 1.0,
     });
     const geo = new THREE.BoxGeometry(w.w, WALL_H, w.d);
@@ -852,7 +990,7 @@ function createTestRoom() {
   lightPositions.forEach((lp) => {
     const pLight = new THREE.PointLight(0x38bdf8, 1.8, 20);
     pLight.position.set(lp.x, lp.y, lp.z);
-    pLight.castShadow = true;
+    pLight.castShadow = false; // CRÍTICO: Desativa sombras caras em cubemap nas luzes pontuais do laboratório
     testRoomGroup.add(pLight);
 
     const bulbGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16);
@@ -2489,8 +2627,9 @@ function fireActiveWeapon(forceAutoAim = false) {
     ));
     combatFlashLight.position.copy(flashPos);
     combatFlashLight.color.setHex(0xfacc15);
+    combatFlashLight.visible = true;
     combatFlashLight.intensity = 7.0;
-    setTimeout(() => { combatFlashLight.intensity = 0.0; }, 80);
+    setTimeout(() => { combatFlashLight.intensity = 0.0; combatFlashLight.visible = false; }, 80);
 
     // Raycast do Disparo
     const shootOrigin = playerGroup.position.clone().add(new THREE.Vector3(0, 0.45, 0));
@@ -2554,8 +2693,9 @@ function fireActiveWeapon(forceAutoAim = false) {
       // Efeito de impacto de sangue e luz
       combatImpactLight.position.copy(hitPoint || hitEnemy.group.position);
       combatImpactLight.color.setHex(0x550005);
+      combatImpactLight.visible = true;
       combatImpactLight.intensity = 2.5;
-      setTimeout(() => { combatImpactLight.intensity = 0.0; }, 100);
+      setTimeout(() => { combatImpactLight.intensity = 0.0; combatImpactLight.visible = false; }, 100);
 
       playZombieHitSound();
 
@@ -2605,8 +2745,9 @@ function fireActiveWeapon(forceAutoAim = false) {
       // Faísca na parede
       combatImpactLight.position.copy(wallHits[0].point);
       combatImpactLight.color.setHex(0xf97316);
+      combatImpactLight.visible = true;
       combatImpactLight.intensity = 4.0;
-      setTimeout(() => { combatImpactLight.intensity = 0.0; }, 100);
+      setTimeout(() => { combatImpactLight.intensity = 0.0; combatImpactLight.visible = false; }, 100);
     }
 
     updateWeaponsUI();
@@ -3625,7 +3766,7 @@ let isGameStarted = false;
 let isGamePaused = false;
 
 function showMenuScreen(screenId) {
-  const screens = ['menu-screen-main', 'menu-screen-difficulty', 'menu-screen-instructions', 'menu-screen-online'];
+  const screens = ['menu-screen-main', 'menu-screen-difficulty', 'menu-screen-instructions', 'menu-screen-online', 'menu-screen-graphics'];
   screens.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -3636,7 +3777,7 @@ function showMenuScreen(screenId) {
 }
 
 function showPauseScreen(screenId) {
-  const screens = ['pause-screen-main', 'pause-screen-diff'];
+  const screens = ['pause-screen-main', 'pause-screen-diff', 'pause-screen-graphics'];
   screens.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -3646,22 +3787,7 @@ function showPauseScreen(screenId) {
   });
 }
 
-// --- SUPORTE E CONTROLES MOBILE / TOQUE VIRTUAL ---
-function checkIsMobileDevice() {
-  const userAgent = navigator.userAgent || '';
-  const isAndroidOrIOS = /Android|iPhone|iPad|iPod/i.test(userAgent);
-  const isMacTouch = /Macintosh/i.test(userAgent) && (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
-  const isPointerCoarse = window.matchMedia && (window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(any-pointer: coarse)').matches);
-  const touchPoints = ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
-  const minDimensionSmall = Math.min(window.innerWidth, window.innerHeight) <= 900;
-
-  return isAndroidOrIOS || isMacTouch || isPointerCoarse || (touchPoints && minDimensionSmall);
-}
-
-let isMobileDevice = checkIsMobileDevice();
-let forceMobileMode = false;
-let isMobileCameraMode = true; // Câmera fixa próxima às costas do jogador no mobile por padrão
-
+// Variáveis de Controle Mobile
 let touchMoveX = 0;
 let touchMoveY = 0;
 let touchAiming = false;
@@ -3688,14 +3814,7 @@ const touchHealCount = document.getElementById('touch-heal-count');
 const mobileModeTag = document.getElementById('mobile-mode-tag');
 
 function updateRendererPerformanceSettings() {
-  const isMobile = checkIsMobileDevice() || forceMobileMode;
-  if (isMobile) {
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
-    renderer.shadowMap.type = THREE.PCFShadowMap;
-  } else {
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  }
+  applyGraphicsProfile(currentGraphicsProfile);
 }
 
 function updateMobileControlsVisibility() {
@@ -4422,6 +4541,43 @@ function initMenuNavigation() {
     });
   }
 
+  // Navegação Gráficos & Desempenho
+  const btnOpenGraphicsMain = document.getElementById('btn-open-graphics-main');
+  const btnBackGraphicsMain = document.getElementById('btn-back-graphics-main');
+  const btnPauseGraphics = document.getElementById('btn-pause-graphics');
+  const btnBackPauseGraphics = document.getElementById('btn-back-from-pause-graphics');
+
+  if (btnOpenGraphicsMain) btnOpenGraphicsMain.addEventListener('click', () => showMenuScreen('menu-screen-graphics'));
+  if (btnBackGraphicsMain) btnBackGraphicsMain.addEventListener('click', () => showMenuScreen('menu-screen-main'));
+  if (btnPauseGraphics) btnPauseGraphics.addEventListener('click', () => showPauseScreen('pause-screen-graphics'));
+  if (btnBackPauseGraphics) btnBackPauseGraphics.addEventListener('click', () => showPauseScreen('pause-screen-main'));
+
+  // Botões de Presets Gráficos
+  document.querySelectorAll('.btn-preset-graphics, .btn-preset-graphics-main').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const gpreset = btn.getAttribute('data-gpreset');
+      if (gpreset) {
+        applyGraphicsProfile(gpreset);
+      }
+    });
+  });
+
+  // Toggles de 60 FPS
+  const toggle60Action = () => {
+    limit60FPS = !limit60FPS;
+    try {
+      localStorage.setItem('outbreak_limit_60fps', limit60FPS.toString());
+    } catch (e) {}
+    updateGraphicsUIBadges();
+  };
+
+  const btn60Main = document.getElementById('btn-toggle-60fps-main');
+  const btn60Pause = document.getElementById('btn-toggle-60fps-pause');
+  if (btn60Main) btn60Main.addEventListener('click', toggle60Action);
+  if (btn60Pause) btn60Pause.addEventListener('click', toggle60Action);
+
+  updateGraphicsUIBadges();
+
   // Navegação no Menu de Pausa
   const btnResumeGame = document.getElementById('btn-resume-game');
   const btnPauseDiff = document.getElementById('btn-pause-difficulty');
@@ -4508,6 +4664,7 @@ initMenuNavigation();
 
 function startTestRoomMode() {
   isTestRoomMode = true;
+  if (testRoomGroup) testRoomGroup.visible = true;
   resetGameState();
 
   // Teleporta o jogador para o centro da Sala de Testes (X: 200, Z: 200)
@@ -4571,6 +4728,7 @@ function startTestRoomMode() {
 
 function exitTestRoomMode() {
   isTestRoomMode = false;
+  if (testRoomGroup) testRoomGroup.visible = false;
   resetGameState();
 
   stopGameplayBGM();
@@ -4600,6 +4758,7 @@ function exitTestRoomMode() {
 function startGame() {
   if (isGameStarted) return;
   isTestRoomMode = false;
+  if (testRoomGroup) testRoomGroup.visible = false;
   isGameStarted = true;
   toggleRoomEnvironmentLight('corridor', true);
 
@@ -5172,8 +5331,17 @@ function resetGameState() {
       }
     }
   }
-  if (combatFlashLight) combatFlashLight.intensity = 0.0;
-  if (combatImpactLight) combatImpactLight.intensity = 0.0;
+  if (combatFlashLight) {
+    combatFlashLight.intensity = 0.0;
+    combatFlashLight.visible = false;
+  }
+  if (combatImpactLight) {
+    combatImpactLight.intensity = 0.0;
+    combatImpactLight.visible = false;
+  }
+  if (testRoomGroup) {
+    testRoomGroup.visible = isTestRoomMode;
+  }
 
   // 9. Reseta Animação e Posição do Jogador
   if (jakeModelInstance) {
@@ -5369,9 +5537,20 @@ playerGroup.rotation.y = playerRotation;
 
 // --- LOOP DE ANIMAÇÃO ---
 const clock = new THREE.Clock();
+let lastFrameTime = 0;
+const frameDuration60 = 1000 / 60; // ~16.66ms por frame
 
-function animate() {
+function animate(currentTime = performance.now()) {
   requestAnimationFrame(animate);
+
+  // Otimização: Trava opcional a 60 FPS para telas 120Hz (iPhone 15 Pro & Galaxy Tab S7)
+  if (limit60FPS && isMobileDevice) {
+    const elapsed = currentTime - lastFrameTime;
+    if (elapsed < frameDuration60 - 1.5) {
+      return;
+    }
+    lastFrameTime = currentTime;
+  }
 
   // --- SISTEMA DE NAVEGAÇÃO DE MENU COM GAMEPAD ---
   let gpUI = null;
@@ -5584,6 +5763,7 @@ function animate() {
 
     // Comportamento se o inimigo morreu
     if (enemy.isDead) {
+      if (enemy.enemyLight) enemy.enemyLight.visible = false;
       if (enemy.dyingTimer > 0) {
         enemy.dyingTimer -= delta;
       }
@@ -5594,6 +5774,15 @@ function animate() {
     }
 
     const distToPlayer = enemy.group.position.distanceTo(playerGroup.position);
+
+    // Otimização: desativa luz pontual de zumbis comuns distantes em mobile
+    if (enemy.enemyLight) {
+      if (isMobileDevice && !enemy.isBoss) {
+        enemy.enemyLight.visible = distToPlayer < 9.0;
+      } else {
+        enemy.enemyLight.visible = true;
+      }
+    }
 
     // Checa se o inimigo foi ativado (Aggro estrito apenas com porta aberta ou quando sofre dano)
     const doorNumber = enemy.targetRoom ? enemy.targetRoom.replace('q', '') : null;
@@ -6238,7 +6427,8 @@ function animate() {
       cameraRaycaster.far = desiredCamDist;
       cameraRaycaster.near = 0.1;
 
-      const camWallHits = cameraRaycaster.intersectObjects(allWallMeshes, false);
+      // Otimização: Raycast apenas nas paredes principais (mainWallMeshes), não nos rodapés
+      const camWallHits = cameraRaycaster.intersectObjects(mainWallMeshes, false);
       if (camWallHits.length > 0) {
         const closestHit = camWallHits[0];
         if (closestHit.distance < desiredCamDist) {
@@ -6277,7 +6467,7 @@ function animate() {
       cameraRaycaster.far = actualDist + 0.35;
       cameraRaycaster.near = 0.05;
 
-      const occludingHits = cameraRaycaster.intersectObjects(allWallMeshes, false);
+      const occludingHits = cameraRaycaster.intersectObjects(mainWallMeshes, false);
       for (let i = 0; i < occludingHits.length; i++) {
         const hitObj = occludingHits[i].object;
         if (hitObj && hitObj.userData && hitObj.userData.isWall) {
@@ -6312,14 +6502,21 @@ function animate() {
       }
     }
 
-    // Interpola a opacidade suavemente em tempo real sem causar recompilação de materiais
+    // Interpola a opacidade e restaura transparent=false nas paredes opacas (Garante Early-Z na GPU)
     for (let i = 0; i < allWallMeshes.length; i++) {
       const wall = allWallMeshes[i];
       if (wall.material) {
-        if (!wall.material.transparent) wall.material.transparent = true;
         const targetOp = wall.userData.targetOpacity !== undefined ? wall.userData.targetOpacity : 1.0;
-        if (Math.abs(wall.material.opacity - targetOp) > 0.002) {
+        if (targetOp < 0.98) {
+          if (!wall.material.transparent) wall.material.transparent = true;
           wall.material.opacity = THREE.MathUtils.lerp(wall.material.opacity, targetOp, delta * 14.0);
+        } else {
+          if (wall.material.opacity < 0.99) {
+            wall.material.opacity = THREE.MathUtils.lerp(wall.material.opacity, 1.0, delta * 14.0);
+          } else {
+            wall.material.opacity = 1.0;
+            if (wall.material.transparent) wall.material.transparent = false;
+          }
         }
       }
     }
@@ -6387,6 +6584,7 @@ function animate() {
     for (const lightObj of env.lights) {
       const maxI = lightObj.userData.maxIntensity || 1.0;
       lightObj.intensity = THREE.MathUtils.lerp(lightObj.intensity, maxI * targetMultiplier, delta * 12.0);
+      lightObj.visible = lightObj.intensity > 0.05;
     }
     if (env.lampMats) {
       const targetEmissive = (env.isLit && targetMultiplier > 0.05) ? (2.5 * targetMultiplier) : 0.0;
@@ -6534,7 +6732,7 @@ function animate() {
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  applyGraphicsProfile(currentGraphicsProfile);
 });
 
 updateInventoryUI();

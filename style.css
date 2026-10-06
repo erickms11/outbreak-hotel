@@ -2602,8 +2602,60 @@ body, html {
   box-shadow: 0 0 14px rgba(239, 68, 68, 0.5), inset 0 0 8px rgba(239, 68, 68, 0.2);
 }
 
+/* --- BOTÕES DE PRESET DE PERFORMANCE & GRÁFICOS --- */
+.btn-preset-graphics, .btn-preset-graphics-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 6px;
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--font-sans);
+}
 
+.btn-preset-graphics:hover, .btn-preset-graphics.active,
+.btn-preset-graphics-main:hover, .btn-preset-graphics-main.active {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+  transform: translateY(-2px);
+}
 
+.btn-toggle-switch {
+  transition: all 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
 
+.btn-toggle-switch:hover {
+  filter: brightness(1.2);
+}
 
+/* --- OTIMIZAÇÃO CRÍTICA DE PERFORMANCE PARA MOBILE & TABLETS (iPhone 15 Pro & Galaxy Tab S7) --- */
+@media (pointer: coarse), (max-width: 1100px) {
+  /* Elimina custo pesado de Gaussian Blur sobre canvas 3D ativo a 120Hz */
+  .permanent-weapon-hud,
+  .boss-health-container,
+  .mobile-touch-controls,
+  #interaction-prompt,
+  .screen-fx-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
 
+  .permanent-weapon-hud {
+    background: rgba(10, 15, 29, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+  }
+
+  .boss-health-container {
+    background: rgba(15, 23, 42, 0.95) !important;
+  }
+}
