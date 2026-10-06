@@ -37,7 +37,7 @@ const MIME_TYPES = {
 const server = http.createServer((req, res) => {
   // CORS para permitir recursos locais
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -55,6 +55,27 @@ const server = http.createServer((req, res) => {
 
   if (pathname.includes('bd97ead0_7a82_44af_8d0b_80c552157a6d.png')) {
     pathname = '/assets/models/jane/bd97ead0_7a82_44af_8d0b_80c552157a6d.png';
+  }
+
+  // Resolução flexível para os modelos FBX de trajes (Jake e Jane)
+  const lowerPath = pathname.toLowerCase();
+  for (const charName of ['jake', 'jane']) {
+    for (let oNum = 2; oNum <= 4; oNum++) {
+      if (lowerPath.includes(`${charName}_outfit${oNum}.fbx`)) {
+        const outfitCandidates = [
+          path.join(__dirname, 'assets', 'models', charName, `${charName}_outfit${oNum}.fbx`),
+          path.join(__dirname, 'assets', 'models', `${charName}_outfit${oNum}.fbx`),
+          path.join(__dirname, 'assets', 'models', charName, `outfit_${oNum}.fbx`),
+          path.join(__dirname, 'assets', 'models', charName, `outfit${oNum}.fbx`),
+        ];
+        for (const cand of outfitCandidates) {
+          if (fs.existsSync(cand)) {
+            pathname = '/' + path.relative(__dirname, cand).replace(/\\/g, '/');
+            break;
+          }
+        }
+      }
+    }
   }
 
   // Previne Directory Traversal
@@ -85,6 +106,11 @@ const server = http.createServer((req, res) => {
       'Pragma': 'no-cache',
       'Expires': '0',
     });
+
+    if (req.method === 'HEAD') {
+      res.end();
+      return;
+    }
 
     const stream = fs.createReadStream(filePath);
     stream.pipe(res);

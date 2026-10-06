@@ -2682,11 +2682,53 @@ body, html {
   transform: translateY(-1px);
 }
 
+.btn-outfit-select:disabled,
+.btn-outfit-select.disabled {
+  opacity: 0.28;
+  cursor: not-allowed !important;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
 .btn-outfit-select.active {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(185, 28, 28, 0.45));
   border-color: #ef4444;
   color: #ffffff;
   box-shadow: 0 0 14px rgba(239, 68, 68, 0.5), inset 0 0 8px rgba(239, 68, 68, 0.2);
+}
+
+.btn-outfit-select.active.jane-active {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.35), rgba(219, 39, 119, 0.45));
+  border-color: #ec4899;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(236, 72, 153, 0.5), inset 0 0 8px rgba(236, 72, 153, 0.2);
+}
+
+.outfit-status-msg {
+  min-height: 18px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #94a3b8;
+  text-align: center;
+  margin-top: 2px;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+}
+
+.outfit-status-msg.success {
+  color: #34d399;
+}
+
+.outfit-status-msg.warning {
+  color: #f59e0b;
+}
+
+.outfit-status-msg.loading {
+  color: #38bdf8;
 }
 
 /* --- BOTÕES DE PRESET DE PERFORMANCE & GRÁFICOS --- */

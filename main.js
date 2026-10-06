@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { assetManager } from './AssetManager.js';
 
 // --- CONFIGURAÇÃO E CONSTANTES DO HOTEL ---
@@ -414,6 +415,30 @@ scene.add(combatFlashLight);
 const combatImpactLight = new THREE.PointLight(0xef4444, 0.0, 6.0);
 combatImpactLight.visible = false;
 scene.add(combatImpactLight);
+
+// --- ILUMINAÇÃO DE DESTAQUE DO PERSONAGEM NO MENU PRINCIPAL (SHOWCASE) ---
+// SpotLight dramática vinda de cima/frente com feixe direcionado ao sobrevivente
+const menuShowcaseLight = new THREE.SpotLight(0xfff8ee, 7.5, 18, Math.PI / 3.5, 0.45, 1.0);
+menuShowcaseLight.position.set(27.8, 3.4, 1.6);
+menuShowcaseLight.target.position.set(25, 1.0, 0);
+scene.add(menuShowcaseLight);
+scene.add(menuShowcaseLight.target);
+
+// Luz omnidirecional de preenchimento frontal suave que acompanha todos os ângulos da rotação
+const menuFillLight = new THREE.PointLight(0xe0f2fe, 4.5, 8.5, 1.1);
+menuFillLight.position.set(25.0, 1.6, 0.0);
+scene.add(menuFillLight);
+
+// Luz de contorno (Rim light) vinda de trás para destacar a silhueta do personagem
+const menuRimLight = new THREE.DirectionalLight(0x38bdf8, 2.0);
+menuRimLight.position.set(22.0, 2.5, -2.0);
+scene.add(menuRimLight);
+
+function toggleMenuShowcaseLight(show) {
+  if (menuShowcaseLight) menuShowcaseLight.visible = !!show;
+  if (menuFillLight) menuFillLight.visible = !!show;
+  if (menuRimLight) menuRimLight.visible = !!show;
+}
 
 function updateGraphicsUIBadges() {
   const profileNames = {
@@ -3111,15 +3136,81 @@ let jakeActions = {};
 let janeActions = {};
 let currentWeaponStance = 'unarmed'; // 'unarmed', 'pistol', 'shotgun'
 
-// --- SISTEMA DE SELEÇÃO DE TRAJES (OUTFITS) ---
+// --- SISTEMA DE SELEÇÃO DE TRAJES (OUTFITS & MODELOS FBX) ---
 const characterOutfits = {
   jake: parseInt(localStorage.getItem('outbreak_jake_outfit') || '1', 10),
   jane: parseInt(localStorage.getItem('outbreak_jane_outfit') || '1', 10)
 };
 
-const outfitTextureCache = {};
+// Dicionário de instâncias 3D completas (FBX, Mixer, Actions, Mãos) para cada traje
+const characterOutfitInstances = {
+  jake: { 1: null, 2: null, 3: null, 4: null },
+  jane: { 1: null, 2: null, 3: null, 4: null }
+};
 
-function updateOutfitUI() {
+// Cache de disponibilidade de arquivos FBX de trajes no servidor
+const outfitAvailabilityCache = {
+  jake_1: true,
+  jane_1: true
+};
+
+let isOutfitLoading = false;
+
+function setOutfitStatus(message = '', type = '') {
+  const statusEl = document.getElementById('outfit-status-msg');
+  if (!statusEl) return;
+  statusEl.textContent = message;
+  statusEl.className = 'outfit-status-msg' + (type ? ` ${type}` : '');
+}
+
+// Verifica de forma assíncrona e rápida se o modelo FBX do traje existe fisicamente
+async function checkOutfitExists(charKey, outfitNum) {
+  const cacheKey = `${charKey}_${outfitNum}`;
+  if (outfitAvailabilityCache[cacheKey] !== undefined) {
+    return outfitAvailabilityCache[cacheKey];
+  }
+
+  // Traje 1 é o padrão original que sempre existe
+  if (outfitNum === 1) {
+    outfitAvailabilityCache[cacheKey] = true;
+    return true;
+  }
+
+  // Se a instância ou modelo já estiver carregado em memória
+  if (characterOutfitInstances[charKey] && characterOutfitInstances[charKey][outfitNum]) {
+    outfitAvailabilityCache[cacheKey] = true;
+    return true;
+  }
+  const modelKey = `${charKey}_outfit${outfitNum}`;
+  if (assetManager && assetManager.models && assetManager.models[modelKey]) {
+    outfitAvailabilityCache[cacheKey] = true;
+    return true;
+  }
+
+  // Caminhos possíveis para o FBX
+  const candidatePaths = [
+    `assets/models/${charKey}/${charKey}_outfit${outfitNum}.fbx`,
+    `assets/models/${charKey}_outfit${outfitNum}.fbx`,
+    `assets/models/${charKey}/${charKey}_outfit_${outfitNum}.fbx`,
+    `assets/models/${charKey}/outfit_${outfitNum}.fbx`,
+    `assets/models/${charKey}/outfit${outfitNum}.fbx`
+  ];
+
+  for (const pathUrl of candidatePaths) {
+    try {
+      const res = await fetch(pathUrl, { method: 'HEAD' });
+      if (res.ok) {
+        outfitAvailabilityCache[cacheKey] = true;
+        return true;
+      }
+    } catch (e) {}
+  }
+
+  outfitAvailabilityCache[cacheKey] = false;
+  return false;
+}
+
+async function updateOutfitUI() {
   const activeChar = selectedCharacter || 'jake';
   const labelEl = document.getElementById('outfit-character-label');
   if (labelEl) {
@@ -3127,16 +3218,107 @@ function updateOutfitUI() {
     labelEl.style.color = (activeChar === 'jane') ? '#ec4899' : '#ef4444';
   }
 
-  const currentOutfit = characterOutfits[activeChar] || 1;
+  let currentOutfit = characterOutfits[activeChar] || 1;
   const outfitBtns = document.querySelectorAll('.btn-outfit-select');
-  outfitBtns.forEach(btn => {
+
+  // Checar disponibilidade de cada botão e desabilitar os inexistentes
+  for (const btn of outfitBtns) {
     const num = parseInt(btn.getAttribute('data-outfit') || '1', 10);
+    const exists = await checkOutfitExists(activeChar, num);
+
+    // Evita aplicar estado desatualizado caso o usuário tenha trocado de personagem no meio do check
+    if ((selectedCharacter || 'jake') !== activeChar) return;
+
+    if (exists) {
+      btn.disabled = false;
+      btn.classList.remove('disabled');
+      btn.title = `Traje ${num} de ${activeChar.toUpperCase()}`;
+    } else {
+      btn.disabled = true;
+      btn.classList.add('disabled');
+      btn.title = `Traje ${num} indisponível (coloque ${activeChar}_outfit${num}.fbx na pasta)`;
+
+      // Se o traje selecionado estiver desabilitado por ausência do arquivo, reseta para Traje 1
+      if (num === currentOutfit) {
+        characterOutfits[activeChar] = 1;
+        currentOutfit = 1;
+        try { localStorage.setItem(`outbreak_${activeChar}_outfit`, '1'); } catch (e) {}
+        updateActiveCharacterModel();
+      }
+    }
+
+    btn.classList.remove('active', 'jane-active');
     if (num === currentOutfit) {
       btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
+      if (activeChar === 'jane') {
+        btn.classList.add('jane-active');
+      }
     }
-  });
+  }
+
+  // Feedback textual para o usuário no menu
+  if (!isOutfitLoading) {
+    if (currentOutfit >= 2) {
+      if (characterOutfitInstances[activeChar] && characterOutfitInstances[activeChar][currentOutfit]) {
+        setOutfitStatus(`Traje ${currentOutfit} de ${activeChar.toUpperCase()} ativo (${activeChar}_outfit${currentOutfit}.fbx)`, 'success');
+      } else {
+        setOutfitStatus(`Traje ${currentOutfit} selecionado (${activeChar}_outfit${currentOutfit}.fbx)`, '');
+      }
+    } else {
+      setOutfitStatus(`Traje 1 padrão de ${activeChar.toUpperCase()} ativo`, '');
+    }
+  }
+}
+
+// Carregador dinâmico de novos modelos FBX para Trajes
+function loadOutfitFBX(charKey, outfitNum, candidatePaths, onComplete) {
+  if (isOutfitLoading) return;
+  isOutfitLoading = true;
+  setOutfitStatus(`Carregando modelo 3D do Traje ${outfitNum} de ${charKey.toUpperCase()}...`, 'loading');
+
+  const loader = new FBXLoader();
+  let pathIndex = 0;
+
+  const tryLoad = () => {
+    if (pathIndex >= candidatePaths.length) {
+      isOutfitLoading = false;
+      outfitAvailabilityCache[`${charKey}_${outfitNum}`] = false;
+      console.warn(`[Outfit] Arquivo ${charKey}_outfit${outfitNum}.fbx não encontrado nos caminhos testados.`);
+      setOutfitStatus(`⚠️ Arquivo ${charKey}_outfit${outfitNum}.fbx não encontrado na pasta assets/models/${charKey}/`, 'warning');
+      updateOutfitUI();
+      if (onComplete) onComplete(false);
+      return;
+    }
+
+    const currentPath = candidatePaths[pathIndex];
+    console.log(`[Outfit] Tentando carregar modelo ${charKey} traje ${outfitNum} de: ${currentPath}...`);
+
+    loader.load(
+      currentPath,
+      (fbx) => {
+        console.log(`[Outfit] Modelo FBX ${currentPath} carregado com sucesso!`);
+        const modelKey = `${charKey}_outfit${outfitNum}`;
+        assetManager.models[modelKey] = fbx;
+        const outfitData = setupCharacter(modelKey, fbx);
+        if (!characterOutfitInstances[charKey]) {
+          characterOutfitInstances[charKey] = {};
+        }
+        characterOutfitInstances[charKey][outfitNum] = outfitData;
+        outfitAvailabilityCache[`${charKey}_${outfitNum}`] = true;
+        isOutfitLoading = false;
+        setOutfitStatus(`Traje ${outfitNum} de ${charKey.toUpperCase()} equipado com sucesso! ✨`, 'success');
+        updateOutfitUI();
+        if (onComplete) onComplete(true);
+      },
+      undefined,
+      (err) => {
+        pathIndex++;
+        tryLoad();
+      }
+    );
+  };
+
+  tryLoad();
 }
 
 function applyCharacterOutfit(charKey, outfitNum) {
@@ -3148,76 +3330,103 @@ function applyCharacterOutfit(charKey, outfitNum) {
 
   updateOutfitUI();
 
-  const modelInstance = (charKey === 'jane') ? janeModelInstance : jakeModelInstance;
-  if (!modelInstance) return;
-
-  const applyTextureToModel = (tex) => {
-    modelInstance.traverse((child) => {
-      if (child.isMesh || child.isSkinnedMesh) {
-        const name = (child.name || '').toLowerCase();
-        if (name.includes('weapon') || name.includes('gun') || name.includes('pistol') || name.includes('shotgun')) return;
-
-        if (child.material) {
-          const materials = Array.isArray(child.material) ? child.material : [child.material];
-          materials.forEach(mat => {
-            mat.map = tex;
-            mat.needsUpdate = true;
-          });
-        }
-      }
-    });
-  };
-
-  const cacheKey = `${charKey}_${outfitNum}`;
-  if (outfitTextureCache[cacheKey]) {
-    applyTextureToModel(outfitTextureCache[cacheKey]);
+  // Se o modelo FBX deste traje já estiver carregado e pronto:
+  if (characterOutfitInstances[charKey] && characterOutfitInstances[charKey][outfitNum]) {
+    updateActiveCharacterModel();
     return;
   }
 
-  const texturePath = `assets/models/${charKey}/outfit_${outfitNum}.png`;
-  const loader = new THREE.TextureLoader();
+  // Se for o traje 1 (padrão)
+  if (outfitNum === 1) {
+    updateActiveCharacterModel();
+    return;
+  }
 
-  loader.load(
-    texturePath,
-    (loadedTexture) => {
-      loadedTexture.flipY = true; // No FBX, o mapeamento UV padrão requer flipY = true
-      if (THREE.SRGBColorSpace) loadedTexture.colorSpace = THREE.SRGBColorSpace;
-      outfitTextureCache[cacheKey] = loadedTexture;
-      applyTextureToModel(loadedTexture);
-      console.log(`[Outfit] ${charKey.toUpperCase()} - Traje ${outfitNum} carregado com sucesso.`);
-    },
-    undefined,
-    (err) => {
-      console.warn(`[Outfit] ${texturePath} ainda não adicionado.`);
-      // Se for Jane e outfit 1, carrega a textura original bd97ead0... caso outfit_1.png falhe
-      if (charKey === 'jane' && outfitNum === 1) {
-        loader.load('assets/models/jane/bd97ead0_7a82_44af_8d0b_80c552157a6d.png', (origTex) => {
-          origTex.flipY = true;
-          if (THREE.SRGBColorSpace) origTex.colorSpace = THREE.SRGBColorSpace;
-          applyTextureToModel(origTex);
-        });
+  // Se for qualquer traje adicional (Traje 2, 3 ou 4) para Jake ou Jane:
+  if (outfitNum >= 2) {
+    const candidatePaths = [
+      `assets/models/${charKey}/${charKey}_outfit${outfitNum}.fbx`,
+      `assets/models/${charKey}_outfit${outfitNum}.fbx`,
+      `assets/models/${charKey}/${charKey}_outfit_${outfitNum}.fbx`,
+      `assets/models/${charKey}/outfit_${outfitNum}.fbx`,
+      `assets/models/${charKey}/outfit${outfitNum}.fbx`
+    ];
+
+    loadOutfitFBX(charKey, outfitNum, candidatePaths, (success) => {
+      if (success) {
+        updateActiveCharacterModel();
+        updateOutfitUI();
+      } else {
+        // Fallback gracioso para Traje 1 sem travar o jogo
+        console.warn(`[Outfit] ${charKey}_outfit${outfitNum}.fbx ainda não está disponível na pasta. Revertendo para Traje 1.`);
+        characterOutfits[charKey] = 1;
+        updateActiveCharacterModel();
+        updateOutfitUI();
       }
-    }
-  );
+    });
+    return;
+  }
+
+  // Fallback geral
+  updateActiveCharacterModel();
 }
 
 function updateActiveCharacterModel() {
   const activeChar = selectedCharacter || 'jake';
+  const activeOutfit = characterOutfits[activeChar] || 1;
 
-  if (jakeModelInstance) jakeModelInstance.visible = (activeChar === 'jake');
-  if (janeModelInstance) janeModelInstance.visible = (activeChar === 'jane');
+  // 1. Ocultar todos os modelos de trajes existentes de ambos os personagens
+  for (const cKey in characterOutfitInstances) {
+    const outfits = characterOutfitInstances[cKey];
+    if (outfits) {
+      for (const oNum in outfits) {
+        const oData = outfits[oNum];
+        if (oData && oData.instance) {
+          const isMatch = (cKey === activeChar && parseInt(oNum, 10) === activeOutfit);
+          oData.instance.visible = isMatch;
+        }
+      }
+    }
+  }
 
-  if (activeChar === 'jane' && janeModelInstance) {
-    playerBody = janeModelInstance;
-    playerMixer = janeMixer;
-    playerActions = janeActions;
-    if (janeRightHand) janeRightHand.add(playerWeaponGroup);
-    if (fallbackPlayerMesh) fallbackPlayerMesh.visible = false;
+  // Mantém retrocompatibilidade para ponteiros legados se instanciados fora da lista
+  if (jakeModelInstance && (!characterOutfitInstances.jake || !characterOutfitInstances.jake[1])) {
+    jakeModelInstance.visible = (activeChar === 'jake' && activeOutfit === 1);
+  }
+  if (janeModelInstance && (!characterOutfitInstances.jane || !characterOutfitInstances.jane[1])) {
+    janeModelInstance.visible = (activeChar === 'jane' && activeOutfit === 1);
+  }
+
+  // 2. Determinar o modelo e dados do traje ativo
+  let currentOutfitData = null;
+  if (characterOutfitInstances[activeChar] && characterOutfitInstances[activeChar][activeOutfit]) {
+    currentOutfitData = characterOutfitInstances[activeChar][activeOutfit];
+  } else if (characterOutfitInstances[activeChar] && characterOutfitInstances[activeChar][1]) {
+    currentOutfitData = characterOutfitInstances[activeChar][1];
+  } else if (activeChar === 'jane' && janeModelInstance) {
+    currentOutfitData = { instance: janeModelInstance, mixer: janeMixer, actions: janeActions, rightHand: janeRightHand };
   } else if (activeChar === 'jake' && jakeModelInstance) {
-    playerBody = jakeModelInstance;
-    playerMixer = jakeMixer;
-    playerActions = jakeActions;
-    if (jakeRightHand) jakeRightHand.add(playerWeaponGroup);
+    currentOutfitData = { instance: jakeModelInstance, mixer: jakeMixer, actions: jakeActions, rightHand: jakeRightHand };
+  }
+
+  if (currentOutfitData && currentOutfitData.instance) {
+    currentOutfitData.instance.visible = true;
+    playerBody = currentOutfitData.instance;
+
+    // Se trocou de mixer de animação, encerra ação anterior para não dar congelamento/desync
+    if (playerMixer !== currentOutfitData.mixer) {
+      if (activePlayerAction) {
+        try { activePlayerAction.stop(); } catch (e) {}
+        activePlayerAction = null;
+      }
+    }
+
+    playerMixer = currentOutfitData.mixer;
+    playerActions = currentOutfitData.actions || {};
+
+    if (currentOutfitData.rightHand) {
+      currentOutfitData.rightHand.add(playerWeaponGroup);
+    }
     if (fallbackPlayerMesh) fallbackPlayerMesh.visible = false;
   } else {
     if (fallbackPlayerMesh) {
@@ -3234,9 +3443,10 @@ function updateActiveCharacterModel() {
     weaponInventory.shotgun.mesh.visible = (equippedWeaponId === 'shotgun');
   }
 
-  // Tocar idle animation caso haja mixer válido
+  // Tocar a animação no mixer atual
   if (playerMixer && playerActions['idle']) {
-    playPlayerAnim(isAiming ? 'aim' : (velocity.lengthSq() > 0 ? 'walk' : 'idle'), 0.1);
+    const animToPlay = isAiming ? 'aim' : (velocity.lengthSq() > 0 ? 'walk' : 'idle');
+    playPlayerAnim(animToPlay, 0.1);
   }
 }
 
@@ -3282,9 +3492,11 @@ function playPlayerAnim(actionName, duration = 0.2) {
   activePlayerAction = nextAction;
 }
 
-// Carregar o modelo glb do Jake (antigo) e FBX da Jane
+// Carregar modelos FBX dos personagens (Jake e Jane) e Trajes adicionais
 assetManager.loadFBX('jake', 'assets/models/jake/jake.fbx');
 assetManager.loadFBX('jane', 'assets/models/jane/jane.fbx');
+assetManager.loadFBX('jake_outfit2', 'assets/models/jake/jake_outfit2.fbx');
+assetManager.loadFBX('jane_outfit2', 'assets/models/jane/jane_outfit2.fbx');
 
 // Carregar modelos dos Inimigos e do Chefe FBX
 assetManager.loadFBX('enemy1', 'assets/models/enemy1.fbx');
@@ -3403,9 +3615,9 @@ assetManager.manager.onLoad = () => {
     }
   });
 
-  // --- FUNÇÃO DE SETUP DE PERSONAGEM (JAKE E JANE) ---
-  const setupCharacter = (modelKey) => {
-    const charModel = assetManager.models[modelKey];
+  // --- FUNÇÃO DE SETUP DE PERSONAGEM (JAKE E JANE E TRAJES) ---
+  const setupCharacter = (modelKey, rawModel = null) => {
+    const charModel = rawModel || assetManager.models[modelKey];
     if (!charModel) return null;
 
     let hasSkeleton = false;
@@ -3425,17 +3637,33 @@ assetManager.manager.onLoad = () => {
         if (name.includes('weapon') || name.includes('gun') || name.includes('rifle') || name.includes('pistol') || name.includes('shotgun') || name.includes('sword') || name.includes('assault')) {
           c.visible = false;
         }
+
+        // Garante espaço de cores sRGB para texturas
+        if (c.material) {
+          const mats = Array.isArray(c.material) ? c.material : [c.material];
+          mats.forEach(mat => {
+            if (mat && mat.map && THREE.SRGBColorSpace) {
+              mat.map.colorSpace = THREE.SRGBColorSpace;
+              mat.map.needsUpdate = true;
+            }
+          });
+        }
       }
-      if (c.isSkinnedMesh) hasSkeleton = true;
+      if (c.isSkinnedMesh) {
+        hasSkeleton = true;
+        c.frustumCulled = false; // Garante que a malha não suma com rotações da câmera
+      }
       if (c.isCamera || c.isLight) toRemove.push(c);
       if (c.isBone && c.name) {
         c.name = c.name.replace(/.*mixamorig/g, 'mixamorig');
-        // Se a personagem (como a Jane) tiver ossos sem o prefixo padrão do Mixamo, nós adicionamos
+        // Se a personagem tiver ossos sem o prefixo padrão do Mixamo, nós adicionamos
         if (!c.name.startsWith('mixamorig')) {
-          // A primeira letra do osso deve ser maiúscula para casar com mixamorigHips, mixamorigSpine, etc
           c.name = 'mixamorig' + c.name.charAt(0).toUpperCase() + c.name.slice(1);
         }
-        if (c.name === 'mixamorigRightHand') rightHand = c;
+        const lowerBone = c.name.toLowerCase();
+        if (lowerBone === 'mixamorigrighthand' || lowerBone.includes('righthand')) {
+          rightHand = c;
+        }
       }
     });
 
@@ -3447,14 +3675,16 @@ assetManager.manager.onLoad = () => {
       charModel.rotation.set(-Math.PI / 2, 0, Math.PI);
     }
 
-    playerGroup.add(charModel);
+    if (!charModel.parent) {
+      playerGroup.add(charModel);
+    }
 
     // Inicializar Mixer
     let mixer = null;
     let actions = {};
     if (hasSkeleton) {
       mixer = new THREE.AnimationMixer(charModel);
-      const isFemale = (modelKey === 'jane');
+      const isFemale = modelKey.toLowerCase().startsWith('jane');
       const anims = ['idle', 'walk', 'run', 'jump', 'shoot', 'reload', 'pistol_idle', 'pistol_walk', 'pistol_run', 'rifle_idle', 'rifle_run', 'rifle_shoot', 'death', 'dying', 'injured_walk', 'injured_run'];
       anims.forEach(animName => {
         let animKey = animName;
@@ -3509,7 +3739,7 @@ assetManager.manager.onLoad = () => {
     return { instance: charModel, hasSkeleton, rightHand, mixer, actions };
   };
 
-  // Configura ambos os personagens
+  // Configura ambos os personagens base
   const jakeData = setupCharacter('jake');
   if (jakeData) {
     jakeModelInstance = jakeData.instance;
@@ -3517,6 +3747,7 @@ assetManager.manager.onLoad = () => {
     jakeRightHand = jakeData.rightHand;
     jakeMixer = jakeData.mixer;
     jakeActions = jakeData.actions;
+    characterOutfitInstances.jake[1] = jakeData;
   }
 
   const janeData = setupCharacter('jane');
@@ -3526,6 +3757,24 @@ assetManager.manager.onLoad = () => {
     janeRightHand = janeData.rightHand;
     janeMixer = janeData.mixer;
     janeActions = janeData.actions;
+    characterOutfitInstances.jane[1] = janeData;
+  }
+
+  // Se os modelos do Traje 2 foram pré-carregados no boot
+  if (assetManager.models['jake_outfit2']) {
+    const jake2Data = setupCharacter('jake_outfit2');
+    if (jake2Data) {
+      characterOutfitInstances.jake[2] = jake2Data;
+      console.log('[Outfit] jake_outfit2 inicializado no startup com sucesso.');
+    }
+  }
+
+  if (assetManager.models['jane_outfit2']) {
+    const jane2Data = setupCharacter('jane_outfit2');
+    if (jane2Data) {
+      characterOutfitInstances.jane[2] = jane2Data;
+      console.log('[Outfit] jane_outfit2 inicializado no startup com sucesso.');
+    }
   }
 
   // Atualiza visibilidade conforme seleção atual
@@ -3792,6 +4041,7 @@ function showMenuScreen(screenId) {
       else el.classList.add('hidden');
     }
   });
+  toggleMenuShowcaseLight(true);
 }
 
 function showPauseScreen(screenId) {
@@ -4740,6 +4990,7 @@ function startTestRoomMode() {
   if (scene.fog) scene.fog.density = 0.012; // Névoa suave na sala de testes
   isGameStarted = true;
   isGamePaused = false;
+  toggleMenuShowcaseLight(false);
 
   stopMenuBGM();
   startGameplayBGM();
@@ -4787,6 +5038,7 @@ function exitTestRoomMode() {
   if (scene.fog) scene.fog.density = 0.085;
   isGameStarted = false;
   isGamePaused = false;
+  toggleMenuShowcaseLight(true);
 
   const permHud = document.getElementById('permanent-weapon-hud');
   if (permHud) permHud.classList.add('hidden');
@@ -4811,6 +5063,7 @@ function startGame() {
   isTestRoomMode = false;
   if (testRoomGroup) testRoomGroup.visible = false;
   isGameStarted = true;
+  toggleMenuShowcaseLight(false);
   updateMenuViewOffset();
   toggleRoomEnvironmentLight('corridor', true);
 
