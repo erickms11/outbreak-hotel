@@ -572,7 +572,7 @@ function registerRoomEnvironment(id, name, baseColor) {
   };
 }
 
-registerRoomEnvironment('corridor', 'Corredor Central', 0x38bdf8);
+registerRoomEnvironment('corridor', 'Corredor Central', 0xffbe76);
 registerRoomEnvironment('q101', 'Q.101 (Suíte Presidencial)', 0xf59e0b);
 registerRoomEnvironment('q102', 'Q.102 (Banheiro Luxo)', 0x06b6d4);
 registerRoomEnvironment('q103', 'Q.103 (Tech Lab)', 0xa855f7);
@@ -727,12 +727,12 @@ function createWallSwitch(envId, x, y, z, rotationY, labelText) {
   return switchGroup;
 }
 
-// 1. Corredor Central (4 Luminárias de Teto)
+// 1. Corredor Central (4 Luminárias de Teto com Luz Âmbar Clássica)
 for (let x = -22; x <= 22; x += 11) {
-  createCeilingLamp('corridor', x, WALL_HEIGHT - 0.05, 0, 0x38bdf8);
-  const pl = new THREE.PointLight(0x38bdf8, 8.5, 30);
+  createCeilingLamp('corridor', x, WALL_HEIGHT - 0.05, 0, 0xffbe76);
+  const pl = new THREE.PointLight(0xffbe76, 7.8, 28);
   pl.position.set(x, WALL_HEIGHT - 0.4, 0);
-  addLightToEnvironment('corridor', pl, 8.5);
+  addLightToEnvironment('corridor', pl, 7.8);
 }
 createWallSwitch('corridor', -2.5, 1.65, -3.32, 0, 'Luz do Corredor');
 
@@ -829,17 +829,31 @@ function createBathroomTileTexture() {
   }
   const texture = new THREE.CanvasTexture(canvas); texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(2, 2); return texture;
 }
-function createCorridorCarpetTexture() {
-  const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512;
-  const ctx = canvas.getContext('2d'); ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, 512, 512);
-  ctx.fillStyle = 'rgba(56, 189, 248, 0.4)'; ctx.fillRect(236, 0, 40, 512);
-  const texture = new THREE.CanvasTexture(canvas); texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(12, 2); return texture;
-}
+// --- TEXTURAS REALISTAS SURVIVAL HORROR ---
+const textureLoader = new THREE.TextureLoader();
+
+const hotelWallTexture = textureLoader.load('assets/textures/parede_hotel_damask.jpg');
+hotelWallTexture.wrapS = THREE.RepeatWrapping;
+hotelWallTexture.wrapT = THREE.RepeatWrapping;
+if (THREE.SRGBColorSpace) hotelWallTexture.colorSpace = THREE.SRGBColorSpace;
+
+const corridorFloorTexture = textureLoader.load('assets/textures/chao_corredor_carpete.jpg');
+corridorFloorTexture.wrapS = THREE.RepeatWrapping;
+corridorFloorTexture.wrapT = THREE.RepeatWrapping;
+corridorFloorTexture.repeat.set(10, 1); // 10 passadeiras ao longo do corredor
+if (THREE.SRGBColorSpace) corridorFloorTexture.colorSpace = THREE.SRGBColorSpace;
 
 // --- PISOS DOS QUARTOS E CORREDOR ---
 const floorGroup = new THREE.Group();
 
-const corridorFloor = new THREE.Mesh(new THREE.BoxGeometry(60, 0.4, 7.2), new THREE.MeshStandardMaterial({ map: createCorridorCarpetTexture(), roughness: 0.6 }));
+const corridorFloor = new THREE.Mesh(
+  new THREE.BoxGeometry(60, 0.4, 7.2),
+  new THREE.MeshStandardMaterial({
+    map: corridorFloorTexture,
+    roughness: 0.72,
+    metalness: 0.05
+  })
+);
 corridorFloor.position.set(0, -0.2, 0); corridorFloor.receiveShadow = true; floorGroup.add(corridorFloor);
 
 const q101Floor = new THREE.Mesh(new THREE.BoxGeometry(19.8, 0.4, 20.4), new THREE.MeshStandardMaterial({ map: createMarbleTexture(), roughness: 0.3 }));
@@ -862,10 +876,6 @@ q106Floor.position.set(16.0, -0.2, 13.8); q106Floor.receiveShadow = true; floorG
 
 scene.add(floorGroup);
 
-const gridHelper = new THREE.GridHelper(60, 30, 0x38bdf8, 0x1e293b);
-gridHelper.position.set(0, 0.005, 0);
-scene.add(gridHelper);
-
 // --- ESTRUTURA DE PAREDES COM ABERTURA REAL PARA AS PORTAS ---
 const wallsGroup = new THREE.Group();
 const wallColliders = [];
@@ -874,11 +884,19 @@ const mainWallMeshes = []; // Otimização: Apenas paredes principais para rayca
 const cameraRaycaster = new THREE.Raycaster();
 
 function createWallSegment(w, h, d, x, y, z, wallName) {
-  // Otimização: Paredes iniciam como opacas para ativar o hardware de Early-Z / Tile Hidden Surface Removal das GPUs mobile
+  // Ajuste de tiling do papel de parede conforme o comprimento da parede
+  const wallTex = hotelWallTexture.clone();
+  wallTex.wrapS = THREE.RepeatWrapping;
+  wallTex.wrapT = THREE.RepeatWrapping;
+  const lengthDim = Math.max(w, d);
+  wallTex.repeat.set(Math.max(1, Math.round(lengthDim / 3.2)), Math.max(1, Math.round(h / 3.0)));
+  wallTex.needsUpdate = true;
+
   const wallMat = new THREE.MeshStandardMaterial({
-    color: 0x1e2638,
-    roughness: 0.85,
-    metalness: 0.1,
+    map: wallTex,
+    color: 0xd4d4d8,
+    roughness: 0.88,
+    metalness: 0.02,
     transparent: false,
     opacity: 1.0,
   });
@@ -891,10 +909,11 @@ function createWallSegment(w, h, d, x, y, z, wallName) {
   mainWallMeshes.push(wallMesh);
 
   const trimHeight = 0.15;
+  // Rodapé clássico de madeira escura nobre (sem emissão neon futurista)
   const trimMat = new THREE.MeshStandardMaterial({
-    color: 0x38bdf8,
-    emissive: 0x0284c7,
-    emissiveIntensity: 0.4,
+    color: 0x241812,
+    roughness: 0.70,
+    metalness: 0.05,
     transparent: false,
     opacity: 1.0,
   });
@@ -1362,8 +1381,18 @@ function updatePlayerHealthUI() {
     medkitCount.textContent = `${medkits}`;
   }
 
+  const touchHealBadge = document.getElementById('touch-heal-count');
+  if (touchHealBadge) {
+    touchHealBadge.textContent = `${medkits}`;
+  }
+
   if (medkitBtn) {
-    medkitBtn.style.opacity = (medkits > 0 && playerHealth < 100) ? '1' : '0.55';
+    medkitBtn.style.opacity = (medkits > 0 && playerHealth < MAX_PLAYER_HEALTH) ? '1' : '0.55';
+  }
+
+  const btnTouchHealEl = document.getElementById('btn-touch-heal');
+  if (btnTouchHealEl) {
+    btnTouchHealEl.style.opacity = (medkits > 0 && playerHealth < MAX_PLAYER_HEALTH) ? '1' : '0.55';
   }
 
   const permHud = document.getElementById('permanent-weapon-hud');
@@ -2004,30 +2033,30 @@ function createEnemy(id, name, type, x, y, z, baseHp, baseSpeed, baseDamage, isB
   return enemyObj;
 }
 
-// Spawns dos Inimigos nos Quartos com distribuição dos modelos
+// Spawns dos Inimigos nos Quartos com distribuição dos modelos (-20% Dificuldade Base Balanceada)
 // Q.101: 1 Zumbi lento (Jogador inicia desarmado, precisa desviar e pegar a chave)
-createEnemy('enemy_101', 'Zumbi Andarilho', 'walker', -23.0, 1.0, -8.0, 70, 2.1, 20, false, 'q101', 'enemy1');
+createEnemy('enemy_101', 'Zumbi Andarilho', 'walker', -23.0, 1.0, -8.0, 56, 2.0, 16, false, 'q101', 'enemy1');
 
 // Q.102: 1 Zumbi (Combate inicial com Revólver recém-obtido)
-createEnemy('enemy_102', 'Lurker Mutante', 'walker', -6.0, 1.0, -10.0, 85, 2.4, 22, false, 'q102', 'enemy2');
+createEnemy('enemy_102', 'Lurker Mutante', 'walker', -6.0, 1.0, -10.0, 68, 2.3, 18, false, 'q102', 'enemy2');
 
 // Q.103: 3 Zumbis (Combate tático no Tech Lab)
-createEnemy('enemy_103_1', 'Cyborg Infectado Alpha', 'cyber', 18.0, 1.0, -16.0, 95, 2.5, 25, false, 'q103', 'enemy3');
-createEnemy('enemy_103_2', 'Cyborg Infectado Beta', 'cyber', 24.0, 1.0, -8.0, 95, 2.6, 25, false, 'q103', 'enemy1');
-createEnemy('enemy_103_3', 'Cyborg Infectado Gamma', 'cyber', 21.0, 1.0, -12.0, 95, 2.5, 25, false, 'q103', 'enemy2');
+createEnemy('enemy_103_1', 'Cyborg Infectado Alpha', 'cyber', 18.0, 1.0, -16.0, 76, 2.4, 20, false, 'q103', 'enemy3');
+createEnemy('enemy_103_2', 'Cyborg Infectado Beta', 'cyber', 24.0, 1.0, -8.0, 76, 2.5, 20, false, 'q103', 'enemy1');
+createEnemy('enemy_103_3', 'Cyborg Infectado Gamma', 'cyber', 21.0, 1.0, -12.0, 76, 2.4, 20, false, 'q103', 'enemy2');
 
 // Q.104: 2 Stalkers Ágeis (Recompensa da Shotgun)
-createEnemy('enemy_104_1', 'Parasita Botânico Alpha', 'stalker', -24.0, 1.0, 16.0, 110, 3.2, 28, false, 'q104', 'enemy2');
-createEnemy('enemy_104_2', 'Parasita Botânico Beta', 'stalker', -18.0, 1.0, 8.0, 110, 3.0, 28, false, 'q104', 'enemy3');
+createEnemy('enemy_104_1', 'Parasita Botânico Alpha', 'stalker', -24.0, 1.0, 16.0, 88, 3.0, 22, false, 'q104', 'enemy2');
+createEnemy('enemy_104_2', 'Parasita Botânico Beta', 'stalker', -18.0, 1.0, 8.0, 88, 2.9, 22, false, 'q104', 'enemy3');
 
 // Q.105: 4 Stalkers Fortes (Desafio pré-chefe no Lavabo de Serviço)
-createEnemy('enemy_105_1', 'Sombra Abissal Alpha', 'stalker', -3.0, 1.0, 16.0, 115, 3.0, 30, false, 'q105', 'enemy1');
-createEnemy('enemy_105_2', 'Sombra Abissal Beta', 'stalker', -8.0, 1.0, 10.0, 115, 3.2, 30, false, 'q105', 'enemy2');
-createEnemy('enemy_105_3', 'Sombra Abissal Gamma', 'stalker', -5.5, 1.0, 14.0, 115, 3.0, 30, false, 'q105', 'enemy3');
-createEnemy('enemy_105_4', 'Sombra Abissal Delta', 'stalker', -9.5, 1.0, 16.0, 115, 3.1, 30, false, 'q105', 'enemy1');
+createEnemy('enemy_105_1', 'Sombra Abissal Alpha', 'stalker', -3.0, 1.0, 16.0, 92, 2.9, 24, false, 'q105', 'enemy1');
+createEnemy('enemy_105_2', 'Sombra Abissal Beta', 'stalker', -8.0, 1.0, 10.0, 92, 3.0, 24, false, 'q105', 'enemy2');
+createEnemy('enemy_105_3', 'Sombra Abissal Gamma', 'stalker', -5.5, 1.0, 14.0, 92, 2.9, 24, false, 'q105', 'enemy3');
+createEnemy('enemy_105_4', 'Sombra Abissal Delta', 'stalker', -9.5, 1.0, 16.0, 92, 3.0, 24, false, 'q105', 'enemy1');
 
-// Q.106: 1 CHEFE ("Guardião da Câmara") - 700 HP, Drop da Chave Mestre 👑 (Boss com ataques especiais de longe e onda de choque)
-createEnemy('boss_106', 'Guardião da Câmara 👹', 'boss', 16.0, 1.5, 12.0, 700, 1.4, 40, true, 'q106', 'enemy_boss');
+// Q.106: 1 CHEFE ("Guardião da Câmara") - 560 HP, Drop da Chave Mestre 👑 (Boss com ataques especiais de longe e onda de choque)
+createEnemy('boss_106', 'Guardião da Câmara 👹', 'boss', 16.0, 1.5, 12.0, 560, 1.35, 32, true, 'q106', 'enemy_boss');
 
 // --- SISTEMA DE ANIMAÇÃO E MODELAGEM 3D DOS INIMIGOS E BOSS ---
 function setupAllEnemies() {
@@ -2204,7 +2233,7 @@ function updateBossHealthUI() {
     bossContainer.classList.remove('hidden');
     const pct = Math.max(0, Math.min(100, (boss.hp / boss.maxHp) * 100));
     if (bossFill) bossFill.style.width = `${pct}%`;
-    if (bossNum) bossNum.textContent = `${Math.ceil(boss.hp)} / ${boss.maxHp} HP (${Math.round(pct)}%)`;
+    if (bossNum) bossNum.textContent = `${Math.ceil(boss.hp)} / ${boss.maxHp}`;
   } else {
     bossContainer.classList.add('hidden');
   }
@@ -2365,7 +2394,7 @@ function spawnBossProjectile(boss) {
     dir: dir,
     speed: 8.5,
     life: 3.5,
-    damage: Math.round(25 * gameDifficulty.damageMultiplier),
+    damage: Math.round(20 * gameDifficulty.damageMultiplier),
   });
 
   playBossRoarSound();
@@ -2400,7 +2429,7 @@ function spawnBossShockwave(boss) {
     life: 1.4,
     maxLife: 1.4,
     hasHitPlayer: false,
-    damage: Math.round(30 * gameDifficulty.damageMultiplier),
+    damage: Math.round(24 * gameDifficulty.damageMultiplier),
   });
 
   playBossRoarSound();
@@ -4398,11 +4427,12 @@ if (btnTouchReload) {
 }
 
 if (btnTouchHeal) {
-  btnTouchHeal.addEventListener('touchstart', (e) => {
-    e.preventDefault();
+  const triggerTouchHeal = (e) => {
+    if (e && e.cancelable) e.preventDefault();
     useMedkit();
-    if (touchHealCount) touchHealCount.textContent = `${playerMedkits}`;
-  }, { passive: false });
+  };
+  btnTouchHeal.addEventListener('touchstart', triggerTouchHeal, { passive: false });
+  btnTouchHeal.addEventListener('click', triggerTouchHeal);
 }
 
 if (btnTouchJump) {
