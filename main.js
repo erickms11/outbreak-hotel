@@ -7,7 +7,7 @@ import { assetManager } from './AssetManager.js';
 // --- CONFIGURAÇÃO E CONSTANTES DO HOTEL ---
 const ROOM_WIDTH = 60;
 const ROOM_DEPTH = 48;
-const WALL_HEIGHT = 4.8;
+const WALL_HEIGHT = 4.0;
 const WALL_THICKNESS = 0.6;
 const PLAYER_RADIUS = 0.55;
 
@@ -830,18 +830,61 @@ function createBathroomTileTexture() {
   const texture = new THREE.CanvasTexture(canvas); texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(2, 2); return texture;
 }
 // --- TEXTURAS REALISTAS SURVIVAL HORROR ---
-const textureLoader = new THREE.TextureLoader();
+const textureLoader = assetManager.textureLoader || new THREE.TextureLoader();
 
-const hotelWallTexture = textureLoader.load('assets/textures/parede_hotel_damask.jpg');
+const hotelWallTexture = textureLoader.load('assets/textures/parede_hotel_damask.jpg', (tex) => {
+  allWallMeshes.forEach(mesh => {
+    if (mesh.material) {
+      if (mesh.material.map) {
+        mesh.material.map.image = tex.image;
+        mesh.material.map.needsUpdate = true;
+      }
+      mesh.material.needsUpdate = true;
+    }
+  });
+});
 hotelWallTexture.wrapS = THREE.RepeatWrapping;
 hotelWallTexture.wrapT = THREE.RepeatWrapping;
 if (THREE.SRGBColorSpace) hotelWallTexture.colorSpace = THREE.SRGBColorSpace;
 
-const corridorFloorTexture = textureLoader.load('assets/textures/chao_corredor_carpete.jpg');
+const corridorFloorTexture = textureLoader.load('assets/textures/chao_corredor_carpete.jpg', (tex) => {
+  if (corridorFloor && corridorFloor.material) {
+    corridorFloor.material.needsUpdate = true;
+  }
+});
 corridorFloorTexture.wrapS = THREE.RepeatWrapping;
 corridorFloorTexture.wrapT = THREE.RepeatWrapping;
 corridorFloorTexture.repeat.set(10, 1); // 10 passadeiras ao longo do corredor
 if (THREE.SRGBColorSpace) corridorFloorTexture.colorSpace = THREE.SRGBColorSpace;
+
+const allRoomFloorMeshes = [];
+const roomWoodFloorTexture = textureLoader.load('assets/textures/piso_madeira_quartos.jpg', (tex) => {
+  allRoomFloorMeshes.forEach(mesh => {
+    if (mesh && mesh.material) {
+      if (mesh.material.map) {
+        mesh.material.map.image = tex.image;
+        mesh.material.map.needsUpdate = true;
+      }
+      mesh.material.needsUpdate = true;
+    }
+  });
+});
+roomWoodFloorTexture.wrapS = THREE.RepeatWrapping;
+roomWoodFloorTexture.wrapT = THREE.RepeatWrapping;
+if (THREE.SRGBColorSpace) roomWoodFloorTexture.colorSpace = THREE.SRGBColorSpace;
+
+function createRoomWoodMaterial(width, depth) {
+  const tex = roomWoodFloorTexture.clone();
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(Math.max(1, Math.round(width / 3.8)), Math.max(1, Math.round(depth / 3.8)));
+  tex.needsUpdate = true;
+  return new THREE.MeshStandardMaterial({
+    map: tex,
+    roughness: 0.65,
+    metalness: 0.05
+  });
+}
 
 // --- PISOS DOS QUARTOS E CORREDOR ---
 const floorGroup = new THREE.Group();
@@ -856,23 +899,23 @@ const corridorFloor = new THREE.Mesh(
 );
 corridorFloor.position.set(0, -0.2, 0); corridorFloor.receiveShadow = true; floorGroup.add(corridorFloor);
 
-const q101Floor = new THREE.Mesh(new THREE.BoxGeometry(19.8, 0.4, 20.4), new THREE.MeshStandardMaterial({ map: createMarbleTexture(), roughness: 0.3 }));
-q101Floor.position.set(-20.1, -0.2, -13.8); q101Floor.receiveShadow = true; floorGroup.add(q101Floor);
+const q101Floor = new THREE.Mesh(new THREE.BoxGeometry(19.8, 0.4, 20.4), createRoomWoodMaterial(19.8, 20.4));
+q101Floor.position.set(-20.1, -0.2, -13.8); q101Floor.receiveShadow = true; floorGroup.add(q101Floor); allRoomFloorMeshes.push(q101Floor);
 
-const q102Floor = new THREE.Mesh(new THREE.BoxGeometry(12.2, 0.4, 20.4), new THREE.MeshStandardMaterial({ map: createBathroomTileTexture(), roughness: 0.2 }));
-q102Floor.position.set(-4.1, -0.2, -13.8); q102Floor.receiveShadow = true; floorGroup.add(q102Floor);
+const q102Floor = new THREE.Mesh(new THREE.BoxGeometry(12.2, 0.4, 20.4), createRoomWoodMaterial(12.2, 20.4));
+q102Floor.position.set(-4.1, -0.2, -13.8); q102Floor.receiveShadow = true; floorGroup.add(q102Floor); allRoomFloorMeshes.push(q102Floor);
 
-const q103Floor = new THREE.Mesh(new THREE.BoxGeometry(28.0, 0.4, 20.4), new THREE.MeshStandardMaterial({ map: createGridTexture(), roughness: 0.5 }));
-q103Floor.position.set(16.0, -0.2, -13.8); q103Floor.receiveShadow = true; floorGroup.add(q103Floor);
+const q103Floor = new THREE.Mesh(new THREE.BoxGeometry(28.0, 0.4, 20.4), createRoomWoodMaterial(28.0, 20.4));
+q103Floor.position.set(16.0, -0.2, -13.8); q103Floor.receiveShadow = true; floorGroup.add(q103Floor); allRoomFloorMeshes.push(q103Floor);
 
-const q104Floor = new THREE.Mesh(new THREE.BoxGeometry(16.0, 0.4, 20.4), new THREE.MeshStandardMaterial({ map: createWoodParquetTexture(), roughness: 0.7 }));
-q104Floor.position.set(-22.0, -0.2, 13.8); q104Floor.receiveShadow = true; floorGroup.add(q104Floor);
+const q104Floor = new THREE.Mesh(new THREE.BoxGeometry(16.0, 0.4, 20.4), createRoomWoodMaterial(16.0, 20.4));
+q104Floor.position.set(-22.0, -0.2, 13.8); q104Floor.receiveShadow = true; floorGroup.add(q104Floor); allRoomFloorMeshes.push(q104Floor);
 
-const q105Floor = new THREE.Mesh(new THREE.BoxGeometry(16.0, 0.4, 20.4), new THREE.MeshStandardMaterial({ map: createBathroomTileTexture(), roughness: 0.3 }));
-q105Floor.position.set(-6.0, -0.2, 13.8); q105Floor.receiveShadow = true; floorGroup.add(q105Floor);
+const q105Floor = new THREE.Mesh(new THREE.BoxGeometry(16.0, 0.4, 20.4), createRoomWoodMaterial(16.0, 20.4));
+q105Floor.position.set(-6.0, -0.2, 13.8); q105Floor.receiveShadow = true; floorGroup.add(q105Floor); allRoomFloorMeshes.push(q105Floor);
 
-const q106Floor = new THREE.Mesh(new THREE.BoxGeometry(28.0, 0.4, 20.4), new THREE.MeshStandardMaterial({ map: createGridTexture(), roughness: 0.3 }));
-q106Floor.position.set(16.0, -0.2, 13.8); q106Floor.receiveShadow = true; floorGroup.add(q106Floor);
+const q106Floor = new THREE.Mesh(new THREE.BoxGeometry(28.0, 0.4, 20.4), createRoomWoodMaterial(28.0, 20.4));
+q106Floor.position.set(16.0, -0.2, 13.8); q106Floor.receiveShadow = true; floorGroup.add(q106Floor); allRoomFloorMeshes.push(q106Floor);
 
 scene.add(floorGroup);
 
@@ -1104,16 +1147,58 @@ function createTestRoom() {
 }
 createTestRoom();
 
-// --- SISTEMA DE NÉVOA / OBSCURIDADE SOBRE QUARTOS TRANCADOS ---
+// --- SISTEMA DE NÉVOA VOLUMÉTRICA ANIMADA SOBRE QUARTOS TRANCADOS ---
 const roomFogObjects = {};
+
+// Cria textura procedural orgânica de fumaça e nuvens de neblina (Multi-puff alpha gradient)
+function createSmokeCloudTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 512, 512);
+
+  const puffs = [
+    { x: 256, y: 256, r: 240, a: 0.80 },
+    { x: 170, y: 190, r: 180, a: 0.60 },
+    { x: 330, y: 210, r: 190, a: 0.65 },
+    { x: 200, y: 320, r: 200, a: 0.55 },
+    { x: 320, y: 320, r: 210, a: 0.60 },
+    { x: 256, y: 160, r: 160, a: 0.50 },
+    { x: 150, y: 280, r: 170, a: 0.50 },
+    { x: 360, y: 260, r: 170, a: 0.50 }
+  ];
+
+  puffs.forEach(p => {
+    const g = ctx.createRadialGradient(p.x, p.y, p.r * 0.1, p.x, p.y, p.r);
+    g.addColorStop(0, `rgba(255, 255, 255, ${p.a})`);
+    g.addColorStop(0.45, `rgba(210, 225, 245, ${p.a * 0.55})`);
+    g.addColorStop(0.8, `rgba(150, 175, 210, ${p.a * 0.20})`);
+    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
+// Névoa desabilitada por enquanto a pedido do usuário
+const ENABLE_ROOM_FOG = false;
+const ENABLE_GROUND_MIST = false;
 
 function createRoomFogShroud(envId, x, y, z, w, h, d, doorX, doorZ, tintColor) {
   const fogGroup = new THREE.Group();
+  fogGroup.visible = ENABLE_ROOM_FOG;
 
   const fogMat = new THREE.MeshBasicMaterial({
     color: tintColor || 0x060913,
     transparent: true,
-    opacity: 0.96,
+    opacity: 0.0,
     side: THREE.DoubleSide,
     depthWrite: false,
   });
@@ -1121,26 +1206,15 @@ function createRoomFogShroud(envId, x, y, z, w, h, d, doorX, doorZ, tintColor) {
   fogMesh.position.set(x, y, z);
   fogGroup.add(fogMesh);
 
-  const barrierMat = new THREE.MeshBasicMaterial({
-    color: tintColor || 0x060913,
-    transparent: true,
-    opacity: 0.95,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-  });
-  const barrierMesh = new THREE.Mesh(new THREE.BoxGeometry(2.7, 3.2, 0.5), barrierMat);
-  barrierMesh.position.set(doorX, 1.6, doorZ);
-  fogGroup.add(barrierMesh);
-
   scene.add(fogGroup);
 
   const fogObj = {
     envId,
     group: fogGroup,
     fogMat,
-    barrierMat,
-    targetOpacity: 0.96,
-    isCleared: false,
+    internalPlanes: [],
+    targetOpacity: 0.0,
+    isCleared: true,
   };
 
   roomFogObjects[envId] = fogObj;
@@ -1174,7 +1248,10 @@ function createMistTexture() {
   grad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 256, 256);
-  return new THREE.CanvasTexture(canvas);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
 }
 
 const mistTexture = createMistTexture();
@@ -1192,6 +1269,7 @@ const groundMistPlanes = [];
 function createGroundMistZone(x, z, width, depth, count = 3) {
   const zoneGroup = new THREE.Group();
   zoneGroup.position.set(x, 0.2, z);
+  zoneGroup.visible = ENABLE_GROUND_MIST;
 
   for (let i = 0; i < count; i++) {
     const size = Math.max(width, depth) * (0.65 + Math.random() * 0.35);
@@ -2855,34 +2933,103 @@ function reloadActiveWeapon() {
 
 // --- SISTEMA DE PORTAS 3D INTERATIVAS ---
 const interactiveDoors = [];
+const allDoorMeshes = [];
+
+const hotelDoorTexture = textureLoader.load('assets/textures/porta_hotel_madeira.jpg', (tex) => {
+  allDoorMeshes.forEach(mesh => {
+    if (mesh && mesh.material) {
+      if (mesh.material.map) {
+        mesh.material.map.image = tex.image;
+        mesh.material.map.needsUpdate = true;
+      }
+      mesh.material.needsUpdate = true;
+    }
+  });
+});
+if (THREE.SRGBColorSpace) hotelDoorTexture.colorSpace = THREE.SRGBColorSpace;
+
+const hotelDoorMaterial = new THREE.MeshStandardMaterial({
+  map: hotelDoorTexture,
+  roughness: 0.5,
+  metalness: 0.1
+});
+
+function createWallFillerMesh(w, h, d, x, y, z, name = 'Parede Vão Porta') {
+  const tex = hotelWallTexture.clone();
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  const len = Math.max(w, d);
+  tex.repeat.set(Math.max(1, Math.round(len / 3.2)), Math.max(1, Math.round(h / 3.0)));
+  tex.needsUpdate = true;
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex,
+    color: 0xd4d4d8,
+    roughness: 0.88,
+    metalness: 0.02
+  });
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData = { isWall: true, wallName: name, targetOpacity: 1.0 };
+  wallsGroup.add(mesh);
+  allWallMeshes.push(mesh);
+  mainWallMeshes.push(mesh);
+  return mesh;
+}
 
 function createInteractiveDoor(x, z, roomNumber, roomTitle, isNorthSide, requiredKey = null) {
   const doorGroup = new THREE.Group();
   doorGroup.position.set(x, 0, z);
 
-  const lintelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 });
-  const lintel = new THREE.Mesh(new THREE.BoxGeometry(3.0, 1.0, 0.8), lintelMat);
-  lintel.position.set(0, 4.2, 0);
-  doorGroup.add(lintel);
+  // 1. Fechamento de parede acima da porta (+15% porta: altura 2.70m, teto em 4.00m)
+  createWallFillerMesh(2.8, 1.30, WALL_THICKNESS, x, 3.35, z, 'Viga Porta ' + roomNumber);
 
-  const signMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 1.8 });
-  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 0.86), signMat);
-  sign.position.set(0, 3.4, 0);
-  doorGroup.add(sign);
+  // 2. Ombreiras laterais de parede para porta de 1.84m (+15% de largura)
+  createWallFillerMesh(0.48, 2.70, WALL_THICKNESS, x - 1.16, 1.35, z, 'Ombreira Esq ' + roomNumber);
+  wallColliders.push({
+    minX: x - 1.4 - PLAYER_RADIUS,
+    maxX: x - 0.92 + PLAYER_RADIUS,
+    minZ: z - 0.3 - PLAYER_RADIUS,
+    maxZ: z + 0.3 + PLAYER_RADIUS,
+    name: 'Ombreira Esq ' + roomNumber,
+    disabled: false
+  });
 
+  createWallFillerMesh(0.48, 2.70, WALL_THICKNESS, x + 1.16, 1.35, z, 'Ombreira Dir ' + roomNumber);
+  wallColliders.push({
+    minX: x + 0.92 - PLAYER_RADIUS,
+    maxX: x + 1.4 + PLAYER_RADIUS,
+    minZ: z - 0.3 - PLAYER_RADIUS,
+    maxZ: z + 0.3 + PLAYER_RADIUS,
+    name: 'Ombreira Dir ' + roomNumber,
+    disabled: false
+  });
+
+  // 3. Moldura de madeira escura (+15% proporcional)
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.65 });
+  const topTrim = new THREE.Mesh(new THREE.BoxGeometry(1.96, 0.08, 0.64), trimMat);
+  topTrim.position.set(0, 2.70, 0);
+  doorGroup.add(topTrim);
+
+  const leftTrim = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.70, 0.64), trimMat);
+  leftTrim.position.set(-0.95, 1.35, 0);
+  doorGroup.add(leftTrim);
+
+  const rightTrim = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.70, 0.64), trimMat);
+  rightTrim.position.set(0.95, 1.35, 0);
+  doorGroup.add(rightTrim);
+
+  // 4. Folha da porta aumentada em 15% (altura 2.70m, largura 1.84m)
   const pivotGroup = new THREE.Group();
-  pivotGroup.position.set(-1.35, 0, 0);
+  pivotGroup.position.set(-0.92, 0, 0);
 
-  const doorMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.5 });
-  const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(2.7, 3.2, 0.12), doorMat);
-  doorPanel.position.set(1.35, 1.6, 0);
-  doorPanel.castShadow = true; doorPanel.receiveShadow = true;
+  const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(1.84, 2.70, 0.10), hotelDoorMaterial);
+  doorPanel.position.set(0.92, 1.35, 0);
+  doorPanel.castShadow = true;
+  doorPanel.receiveShadow = true;
   pivotGroup.add(doorPanel);
-
-  const knobMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.9 });
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 12), knobMat);
-  knob.position.set(2.4, 1.5, 0.12);
-  pivotGroup.add(knob);
+  allDoorMeshes.push(doorPanel);
 
   doorGroup.add(pivotGroup);
   scene.add(doorGroup);
@@ -2903,8 +3050,8 @@ function createInteractiveDoor(x, z, roomNumber, roomTitle, isNorthSide, require
   };
 
   const collider = {
-    minX: x - 1.4 - PLAYER_RADIUS,
-    maxX: x + 1.4 + PLAYER_RADIUS,
+    minX: x - 0.95 - PLAYER_RADIUS,
+    maxX: x + 0.95 + PLAYER_RADIUS,
     minZ: z - 0.4 - PLAYER_RADIUS,
     maxZ: z + 0.4 + PLAYER_RADIUS,
     name: `Porta ${roomNumber} (${roomTitle})`,
@@ -2956,40 +3103,48 @@ function createGrandExitGate() {
   const gateGroup = new THREE.Group();
   gateGroup.position.set(30.0, 0, 0);
 
-  const lintelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.8 });
-  const lintel = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 5.2), lintelMat);
-  lintel.position.set(0, 4.2, 0);
-  gateGroup.add(lintel);
+  // Fechamento de parede acima da porta dupla de saída (+15% porta: altura 3.05m, teto 4.00m)
+  createWallFillerMesh(WALL_THICKNESS, 0.95, 5.0, 30.0, 3.525, 0, 'Viga Porta Mestre');
 
-  const signMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xd97706, emissiveIntensity: 2.5 });
-  const sign = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.5, 3.4), signMat);
-  sign.position.set(0, 3.4, 0);
-  gateGroup.add(sign);
+  // Ombreiras laterais da saída (+15%: largura de cada folha 1.95m, total 3.90m num vão de 5.0m)
+  createWallFillerMesh(WALL_THICKNESS, 3.05, 0.55, 30.0, 1.525, 2.225, 'Ombreira Sul Saída');
+  wallColliders.push({
+    minX: 30.0 - 0.3 - PLAYER_RADIUS,
+    maxX: 30.0 + 0.3 + PLAYER_RADIUS,
+    minZ: 1.95 - PLAYER_RADIUS,
+    maxZ: 2.5 + PLAYER_RADIUS,
+    name: 'Ombreira Sul Saída',
+    disabled: false
+  });
+
+  createWallFillerMesh(WALL_THICKNESS, 3.05, 0.55, 30.0, 1.525, -2.225, 'Ombreira Norte Saída');
+  wallColliders.push({
+    minX: 30.0 - 0.3 - PLAYER_RADIUS,
+    maxX: 30.0 + 0.3 + PLAYER_RADIUS,
+    minZ: -2.5 - PLAYER_RADIUS,
+    maxZ: -1.95 + PLAYER_RADIUS,
+    name: 'Ombreira Norte Saída',
+    disabled: false
+  });
 
   const pivotLeft = new THREE.Group();
-  pivotLeft.position.set(0, 0, -2.2);
-  const doorMat = new THREE.MeshStandardMaterial({ color: 0x78350f, metalness: 0.7, roughness: 0.3 });
-  const leafLeft = new THREE.Mesh(new THREE.BoxGeometry(0.16, 3.4, 2.2), doorMat);
-  leafLeft.position.set(0, 1.7, 1.1);
-  leafLeft.castShadow = true; leafLeft.receiveShadow = true;
+  pivotLeft.position.set(0, 0, -1.95);
+  const leafLeft = new THREE.Mesh(new THREE.BoxGeometry(0.14, 3.05, 1.95), hotelDoorMaterial);
+  leafLeft.position.set(0, 1.525, 0.975);
+  leafLeft.castShadow = true;
+  leafLeft.receiveShadow = true;
   pivotLeft.add(leafLeft);
-
-  const goldHandleMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.95, roughness: 0.1 });
-  const handleLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.8, 16), goldHandleMat);
-  handleLeft.position.set(-0.12, 1.6, 2.0);
-  pivotLeft.add(handleLeft);
+  allDoorMeshes.push(leafLeft);
   gateGroup.add(pivotLeft);
 
   const pivotRight = new THREE.Group();
-  pivotRight.position.set(0, 0, 2.2);
-  const leafRight = new THREE.Mesh(new THREE.BoxGeometry(0.16, 3.4, 2.2), doorMat);
-  leafRight.position.set(0, 1.7, -1.1);
-  leafRight.castShadow = true; leafRight.receiveShadow = true;
+  pivotRight.position.set(0, 0, 1.95);
+  const leafRight = new THREE.Mesh(new THREE.BoxGeometry(0.14, 3.05, 1.95), hotelDoorMaterial);
+  leafRight.position.set(0, 1.525, -0.975);
+  leafRight.castShadow = true;
+  leafRight.receiveShadow = true;
   pivotRight.add(leafRight);
-
-  const handleRight = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.8, 16), goldHandleMat);
-  handleRight.position.set(-0.12, 1.6, -2.0);
-  pivotRight.add(handleRight);
+  allDoorMeshes.push(leafRight);
   gateGroup.add(pivotRight);
 
   scene.add(gateGroup);
@@ -2997,8 +3152,8 @@ function createGrandExitGate() {
   const collider = {
     minX: 30.0 - 0.4 - PLAYER_RADIUS,
     maxX: 30.0 + 0.4 + PLAYER_RADIUS,
-    minZ: -2.5 - PLAYER_RADIUS,
-    maxZ: 2.5 + PLAYER_RADIUS,
+    minZ: -2.0 - PLAYER_RADIUS,
+    maxZ: 2.0 + PLAYER_RADIUS,
     name: 'Porta Mestre de Saída',
     disabled: false,
   };
@@ -3621,9 +3776,9 @@ assetManager.manager.onLoad = () => {
   const PISTOL_POS_Z = 8;
   const PISTOL_SCALE = 1.25;
 
-  // Calibração da Shotgun na mão (orientação corrigida com cano para a frente e empunhadura alinhada)
+  // Calibração da Shotgun na mão (orientação original restaurada conforme antes da adição de modelos)
   const SHOTGUN_ROT_X = THREE.MathUtils.degToRad(-70);
-  const SHOTGUN_ROT_Y = THREE.MathUtils.degToRad(-90); // Inversão em Y necessária pois o modelo aponta para -Z
+  const SHOTGUN_ROT_Y = THREE.MathUtils.degToRad(90);
   const SHOTGUN_ROT_Z = THREE.MathUtils.degToRad(180);
   const SHOTGUN_POS_X = 15;
   const SHOTGUN_POS_Y = -2;
@@ -5660,6 +5815,11 @@ function resetGameState() {
     const fogObj = roomFogObjects[envId];
     fogObj.isCleared = false; fogObj.targetOpacity = 0.96;
     fogObj.fogMat.opacity = 0.96; fogObj.barrierMat.opacity = 0.95; fogObj.group.visible = true;
+    if (fogObj.internalPlanes) {
+      fogObj.internalPlanes.forEach(plane => {
+        plane.material.opacity = plane.userData.baseOpacity;
+      });
+    }
   }
 
   // 8. Configura Iluminação Inicial (Corredor Aceso por Padrão)
@@ -6022,12 +6182,37 @@ function animate(currentTime = performance.now()) {
     }
   }
 
-  // Animação das névoas
+  // Animação das névoas volumétricas dos quartos trancados
   for (const envId in roomFogObjects) {
     const fogObj = roomFogObjects[envId];
     if (fogObj.group.visible) {
       fogObj.fogMat.opacity = THREE.MathUtils.lerp(fogObj.fogMat.opacity, fogObj.targetOpacity, delta * 3.5);
       fogObj.barrierMat.opacity = THREE.MathUtils.lerp(fogObj.barrierMat.opacity, fogObj.targetOpacity, delta * 3.5);
+
+      // Movimentação contínua da fumaça (scroll UV nas superfícies)
+      if (fogObj.fogTex) {
+        fogObj.fogTex.offset.x += delta * 0.015;
+        fogObj.fogTex.offset.y += delta * 0.010;
+      }
+      if (fogObj.barrierTex) {
+        fogObj.barrierTex.offset.x -= delta * 0.020;
+        fogObj.barrierTex.offset.y += delta * 0.012;
+      }
+
+      // Animação das camadas volumétricas internas flutuantes
+      if (fogObj.internalPlanes) {
+        for (const plane of fogObj.internalPlanes) {
+          plane.material.opacity = THREE.MathUtils.lerp(
+            plane.material.opacity,
+            fogObj.targetOpacity * plane.userData.baseOpacity,
+            delta * 3.5
+          );
+          plane.rotation.z += plane.userData.rotSpeed * delta;
+          plane.position.y = plane.userData.baseY + Math.sin(time * plane.userData.floatSpeed + plane.userData.floatOffset) * 0.08;
+          plane.position.x = plane.userData.baseX + Math.sin(time * 0.5 + plane.userData.floatOffset) * 0.15;
+        }
+      }
+
       if (fogObj.fogMat.opacity <= 0.02) fogObj.group.visible = false;
     }
   }
@@ -6036,6 +6221,11 @@ function animate(currentTime = performance.now()) {
   for (const plane of groundMistPlanes) {
     plane.rotation.z += plane.userData.rotSpeed * delta;
     plane.position.y = plane.userData.baseY + Math.sin(time * plane.userData.floatSpeed + plane.userData.floatOffset) * 0.04;
+  }
+  // Ondulação de textura na névoa rasteira
+  if (mistTexture) {
+    mistTexture.offset.x += delta * 0.012;
+    mistTexture.offset.y += delta * 0.008;
   }
 
   // Animação das chaves 3D
