@@ -2926,6 +2926,11 @@ body, html {
    ========================================================================== */
 
 /* --- MODAL DA VITROLA RETRÔ --- */
+.jukebox-modal.hidden,
+.bed-sleep-overlay.hidden {
+  display: none !important;
+}
+
 .jukebox-modal {
   position: fixed;
   inset: 0;

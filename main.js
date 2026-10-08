@@ -3733,6 +3733,9 @@ function openJukeboxModal() {
   if (modal) {
     updateJukeboxUI();
     modal.classList.remove('hidden');
+    if (document.exitPointerLock) {
+      try { document.exitPointerLock(); } catch (e) {}
+    }
   }
 }
 
@@ -3740,6 +3743,12 @@ function closeJukeboxModal() {
   const modal = document.getElementById('jukebox-modal');
   if (modal) modal.classList.add('hidden');
 }
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeJukeboxModal();
+  }
+});
 
 // 4. Mecânica da Cama, Descanso e Salvamento
 function startRestingInBed() {
@@ -6197,9 +6206,9 @@ function handleInteraction() {
     }
   }
 
-  // 4.2 Cama Luxuosa do Refúgio (Descanso, Cura Total & Salvar Jogo) (até 2.8m)
+  // 4.2 Cama Luxuosa do Refúgio (Descanso, Cura Total & Salvar Jogo) (até 3.2m)
   const distToBed = playerPos.distanceTo(new THREE.Vector3(26.2, 1.0, -20.6));
-  if (distToBed < 2.8) {
+  if (distToBed < 3.2) {
     if (isPlayerRestingInBed) {
       wakeUpFromBed();
     } else {
@@ -6208,9 +6217,9 @@ function handleInteraction() {
     return;
   }
 
-  // 4.3 Vitrola Retrô do Refúgio (Música Lo-Fi / Clássica) (até 2.5m)
+  // 4.3 Vitrola Retrô do Refúgio (Música Lo-Fi / Clássica) (até 3.2m)
   const distToJukebox = playerPos.distanceTo(new THREE.Vector3(22.2, 1.0, -20.0));
-  if (distToJukebox < 2.5) {
+  if (distToJukebox < 3.2) {
     openJukeboxModal();
     return;
   }
@@ -7911,13 +7920,13 @@ function animate(currentTime = performance.now()) {
   // 4.2 Checa Cama do Refúgio
   if (!nearInteractive) {
     const distBed = playerGroup.position.distanceTo(new THREE.Vector3(26.2, 1.0, -20.6));
-    if (distBed < 2.8) { nearInteractive = { type: 'bed' }; }
+    if (distBed < 3.2) { nearInteractive = { type: 'bed' }; }
   }
 
   // 4.3 Checa Vitrola Retrô do Refúgio
   if (!nearInteractive) {
     const distJuke = playerGroup.position.distanceTo(new THREE.Vector3(22.2, 1.0, -20.0));
-    if (distJuke < 2.5) { nearInteractive = { type: 'jukebox' }; }
+    if (distJuke < 3.2) { nearInteractive = { type: 'jukebox' }; }
   }
 
   // 5. Checa Porta Mestre

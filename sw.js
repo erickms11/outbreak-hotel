@@ -1,4 +1,4 @@
-const CACHE_NAME = 'outbreak-hotel-v25';
+const CACHE_NAME = 'outbreak-hotel-v26';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
