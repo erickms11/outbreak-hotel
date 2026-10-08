@@ -7461,7 +7461,8 @@ function handleGamepadMenuNavigation(gp) {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').then((reg) => {
-      console.log('PWA Service Worker registrado com sucesso:', reg.scope);
+      reg.update();
+      console.log('PWA Service Worker registrado e atualizado com sucesso:', reg.scope);
     }).catch((err) => {
       console.warn('Falha ao registrar PWA Service Worker:', err);
     });
