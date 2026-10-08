@@ -27,7 +27,7 @@
     <meta name="theme-color" content="#090d16" />
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
-    <link rel="stylesheet" href="./style.css?v=24" />
+    <link rel="stylesheet" href="./style.css?v=25" />
   </head>
   <body>
     <div id="canvas-container"></div>
@@ -212,6 +212,11 @@
                 <div id="outfit-status-msg" class="outfit-status-msg"></div>
               </div>
             </div>
+
+            <button id="btn-continue-game" class="btn-start-game btn-continue-game hidden" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border-color: #34d399; margin-bottom: 8px;">
+              <span>CONTINUAR JOGO 💾</span>
+              <span style="font-size: 0.75rem; opacity: 0.9; margin-left: 6px;">(Refúgio Seguro)</span>
+            </button>
 
             <button id="btn-start-game" class="btn-start-game">
               <span>INICIAR JOGO</span>
@@ -686,9 +691,79 @@
         <p>Os infectados do hotel dominaram você. Colete remédios nas salas e mantenha distância ao atirar!</p>
         <button id="btn-game-over-restart" class="btn-game-over">TENTAR NOVAMENTE 🔄</button>
       </div>
+    <!-- Modal da Vitrola Retrô (Safe Room Jukebox) -->
+    <div id="jukebox-modal" class="jukebox-modal hidden">
+      <div class="jukebox-card glass-panel">
+        <div class="jukebox-header">
+          <div class="jukebox-title-group">
+            <span class="jukebox-icon">📻</span>
+            <div>
+              <h2>Vitrola do Refúgio</h2>
+              <p class="jukebox-subtext">Selecione uma faixa entre discos de vinil e fitas cassete</p>
+            </div>
+          </div>
+          <button id="btn-close-jukebox" class="btn-close-modal" aria-label="Fechar Vitrola">✖</button>
+        </div>
+
+        <div class="jukebox-body">
+          <!-- Animação do toca-discos / vinil girando -->
+          <div class="jukebox-turntable-preview">
+            <div id="vinyl-disc-ui" class="vinyl-disc-ui">
+              <div class="vinyl-groove groove-1"></div>
+              <div class="vinyl-groove groove-2"></div>
+              <div class="vinyl-groove groove-3"></div>
+              <div class="vinyl-center-label">
+                <span class="vinyl-label-icon">🎵</span>
+              </div>
+            </div>
+            <div class="jukebox-playback-status">
+              <span id="jukebox-playing-indicator" class="playing-indicator-badge">PARADO</span>
+              <span id="jukebox-current-track-name" class="now-playing-title">Nenhuma música tocando</span>
+            </div>
+          </div>
+
+          <!-- Lista de faixas (Discos & Fitas) -->
+          <div class="jukebox-tracklist-container">
+            <h3 class="tracklist-heading">COLEÇÃO DE MÚSICAS</h3>
+            <div id="jukebox-tracklist" class="jukebox-tracklist">
+              <!-- Renderizado dinamicamente via JS -->
+            </div>
+          </div>
+        </div>
+
+        <div class="jukebox-footer">
+          <button id="btn-jukebox-stop" class="btn-jukebox-stop">⏸️ PARAR MÚSICA</button>
+          <button id="btn-jukebox-close-bottom" class="btn-menu-back">FECHAR</button>
+        </div>
+      </div>
     </div>
 
-    <!-- Overlay para Forçar Modo Paisagem no Celular -->
+    <!-- Overlay de Descanso na Cama (Safe Room Rest & Save) -->
+    <div id="bed-sleep-overlay" class="bed-sleep-overlay hidden">
+      <div class="bed-sleep-card glass-panel">
+        <div class="sleep-moon-icon">🌙✨</div>
+        <h2>Descansando no Refúgio</h2>
+        <div class="sleep-perks">
+          <div class="sleep-perk-item">
+            <span class="perk-icon">💚</span>
+            <span class="perk-text">Vida restaurada para <strong>100% (FINE)</strong></span>
+          </div>
+          <div class="sleep-perk-item">
+            <span class="perk-icon">💾</span>
+            <span class="perk-text">Progresso salvo com sucesso no navegador!</span>
+          </div>
+          <div class="sleep-perk-item">
+            <span class="perk-icon">🎵</span>
+            <span id="sleep-now-playing-label" class="perk-text">Música tocando na vitrola</span>
+          </div>
+        </div>
+        <p class="sleep-message">A calma deste quarto protege você dos terrores do hotel. Fique deitado e aproveite a música pelo tempo que desejar.</p>
+        <button id="btn-wake-up" class="btn-wake-up">
+          <span>ACORDAR E LEVANTAR 🌅</span>
+          <span class="key-hint-tag">[Espaço / E / A]</span>
+        </button>
+      </div>
+    </div>
     <div id="rotate-device-screen" class="rotate-device-overlay">
       <div class="rotate-device-card glass-panel">
         <div class="phone-rotate-icon">📱↪️</div>
@@ -697,7 +772,7 @@
       </div>
     </div>
 
-    <script type="module" src="./main.js?v=24"></script>
+    <script type="module" src="./main.js?v=25"></script>
   </body>
 </html>
 

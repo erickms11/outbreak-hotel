@@ -2920,3 +2920,427 @@ body, html {
     background: rgba(15, 23, 42, 0.95) !important;
   }
 }
+
+/* ==========================================================================
+   SISTEMA DE SAFE ROOM (REFÚGIO SEGURO, VITROLA RETRÔ & DESCANSO NA CAMA)
+   ========================================================================== */
+
+/* --- MODAL DA VITROLA RETRÔ --- */
+.jukebox-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 7, 14, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  padding: 16px;
+  animation: fadeInModal 0.25s ease-out;
+}
+
+.jukebox-card {
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at top, rgba(30, 24, 18, 0.96) 0%, rgba(15, 12, 10, 0.98) 100%) !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.15) !important;
+  border-radius: 18px;
+  padding: 22px;
+  color: #fef3c7;
+  overflow: hidden;
+}
+
+.jukebox-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+}
+
+.jukebox-title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.jukebox-icon {
+  font-size: 2.2rem;
+  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.5));
+}
+
+.jukebox-header h2 {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #fbbf24;
+  letter-spacing: 1px;
+  margin: 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.jukebox-subtext {
+  font-size: 0.8rem;
+  color: #d1d5db;
+  margin: 4px 0 0 0;
+}
+
+.jukebox-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Toca-discos e Vinil Giratório */
+.jukebox-turntable-preview {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 14px;
+  padding: 14px 18px;
+}
+
+.vinyl-disc-ui {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #262626 0%, #111 60%, #000 100%);
+  border: 2px solid #444;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+  flex-shrink: 0;
+  transition: transform 0.3s;
+}
+
+.vinyl-disc-ui.spinning {
+  animation: spinVinyl 3.5s linear infinite;
+}
+
+@keyframes spinVinyl {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.vinyl-groove {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.groove-1 { width: 62px; height: 62px; }
+.groove-2 { width: 48px; height: 48px; }
+.groove-3 { width: 34px; height: 34px; }
+
+.vinyl-center-label {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #d97706;
+  border: 2px solid #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.vinyl-label-icon {
+  font-size: 0.65rem;
+}
+
+.jukebox-playback-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.playing-indicator-badge {
+  align-self: flex-start;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(100, 116, 139, 0.3);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.playing-indicator-badge.active {
+  background: rgba(34, 197, 94, 0.25);
+  color: #4ade80;
+  border-color: #22c55e;
+  animation: pulseGreenGlow 2s infinite ease-in-out;
+}
+
+.now-playing-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Lista de Faixas */
+.jukebox-tracklist-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tracklist-heading {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #f59e0b;
+  margin: 0;
+}
+
+.jukebox-tracklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.jukebox-track-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.jukebox-track-item:hover:not(.locked) {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  transform: translateX(3px);
+}
+
+.jukebox-track-item.playing {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #f59e0b;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+}
+
+.jukebox-track-item.locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+.track-left-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.track-type-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.track-texts {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.track-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-desc {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.btn-play-track {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: #f59e0b;
+  color: #000;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.btn-play-track:hover {
+  background: #fbbf24;
+  transform: scale(1.04);
+}
+
+.btn-play-track.playing-btn {
+  background: #22c55e;
+  color: #fff;
+}
+
+.jukebox-footer {
+  display: flex;
+  gap: 10px;
+  border-top: 1px solid rgba(245, 158, 11, 0.2);
+  padding-top: 14px;
+  margin-top: 8px;
+}
+
+.btn-jukebox-stop {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-jukebox-stop:hover {
+  background: rgba(239, 68, 68, 0.35);
+  color: #fff;
+}
+
+/* --- OVERLAY DE DESCANSO NA CAMA (SAFE ROOM REST) --- */
+.bed-sleep-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, rgba(8, 14, 26, 0.94) 0%, rgba(2, 4, 8, 0.98) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 10000;
+  padding: 20px;
+  animation: sleepFadeIn 0.6s ease-out;
+}
+
+@keyframes sleepFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.bed-sleep-card {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(15, 23, 42, 0.92) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 40px rgba(56, 189, 248, 0.15) !important;
+  border-radius: 20px;
+  padding: 30px 26px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: #f8fafc;
+}
+
+.sleep-moon-icon {
+  font-size: 3.4rem;
+  filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.6));
+  animation: moonFloat 3s infinite ease-in-out;
+}
+
+@keyframes moonFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.bed-sleep-card h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #38bdf8;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+.sleep-perks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sleep-perk-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.perk-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.sleep-message {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.btn-wake-up {
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border: 1px solid #38bdf8;
+  color: #fff;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(2, 132, 199, 0.4);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-wake-up:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(2, 132, 199, 0.6);
+}
+
+.key-hint-tag {
+  font-size: 0.75rem;
+  opacity: 0.85;
+  font-weight: 600;
+}
+

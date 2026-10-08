@@ -579,6 +579,7 @@ registerRoomEnvironment('q103', 'Q.103 (Tech Lab)', 0xa855f7);
 registerRoomEnvironment('q104', 'Q.104 (Suíte Botânica)', 0x84cc16);
 registerRoomEnvironment('q105', 'Q.105 (Lavabo Serviço)', 0xfef08a);
 registerRoomEnvironment('q106', 'Q.106 (Câmara Testes)', 0xf8fafc);
+registerRoomEnvironment('q107', 'Q.107 (Refúgio da Vitrola)', 0xf59e0b);
 
 // --- SISTEMA DE OSCILAÇÃO / TERROR NA LUZ DO CORREDOR ---
 let corridorFlickerTimer = 0;
@@ -794,6 +795,13 @@ q106Light2.position.set(22.0, WALL_HEIGHT - 0.4, 12.8);
 addLightToEnvironment('q106', q106Light2, 11.5);
 createWallSwitch('q106', 18.5, 1.65, 3.88, 0, 'Luz Q.106');
 
+// 8. Q.107 Safe Room (Refúgio da Vitrola) - Iluminação Aconchegante e Quente
+createCeilingLamp('q107', 25.0, WALL_HEIGHT - 0.05, -13.8, 0xf59e0b);
+const q107Light = new THREE.PointLight(0xf59e0b, 10.5, 32);
+q107Light.position.set(25.0, WALL_HEIGHT - 0.4, -13.8);
+addLightToEnvironment('q107', q107Light, 10.5);
+createWallSwitch('q107', 27.5, 1.65, -3.88, Math.PI, 'Luz Refúgio');
+
 // --- TEXTURAS PROCEDIMENTAIS DE PISO ---
 function createGridTexture() {
   const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512;
@@ -905,8 +913,11 @@ q101Floor.position.set(-20.1, -0.2, -13.8); q101Floor.receiveShadow = true; floo
 const q102Floor = new THREE.Mesh(new THREE.BoxGeometry(12.2, 0.4, 20.4), createRoomWoodMaterial(12.2, 20.4));
 q102Floor.position.set(-4.1, -0.2, -13.8); q102Floor.receiveShadow = true; floorGroup.add(q102Floor); allRoomFloorMeshes.push(q102Floor);
 
-const q103Floor = new THREE.Mesh(new THREE.BoxGeometry(28.0, 0.4, 20.4), createRoomWoodMaterial(28.0, 20.4));
-q103Floor.position.set(16.0, -0.2, -13.8); q103Floor.receiveShadow = true; floorGroup.add(q103Floor); allRoomFloorMeshes.push(q103Floor);
+const q103Floor = new THREE.Mesh(new THREE.BoxGeometry(17.8, 0.4, 20.4), createRoomWoodMaterial(17.8, 20.4));
+q103Floor.position.set(11.0, -0.2, -13.8); q103Floor.receiveShadow = true; floorGroup.add(q103Floor); allRoomFloorMeshes.push(q103Floor);
+
+const safeRoomFloor = new THREE.Mesh(new THREE.BoxGeometry(9.8, 0.4, 20.4), createRoomWoodMaterial(9.8, 20.4));
+safeRoomFloor.position.set(25.0, -0.2, -13.8); safeRoomFloor.receiveShadow = true; floorGroup.add(safeRoomFloor); allRoomFloorMeshes.push(safeRoomFloor);
 
 const q104Floor = new THREE.Mesh(new THREE.BoxGeometry(16.0, 0.4, 20.4), createRoomWoodMaterial(16.0, 20.4));
 q104Floor.position.set(-22.0, -0.2, 13.8); q104Floor.receiveShadow = true; floorGroup.add(q104Floor); allRoomFloorMeshes.push(q104Floor);
@@ -988,6 +999,7 @@ createWallSegment(WALL_THICKNESS, WALL_HEIGHT, 21.5, 30.0, WALL_HEIGHT / 2, 13.2
 // Divisórias Verticais Entre Quartos
 createWallSegment(WALL_THICKNESS, WALL_HEIGHT, 20.4, -10.2, WALL_HEIGHT / 2, -13.8, 'Divisória Q101/Q102');
 createWallSegment(WALL_THICKNESS, WALL_HEIGHT, 20.4, 2.0, WALL_HEIGHT / 2, -13.8, 'Divisória Q102/Q103');
+createWallSegment(WALL_THICKNESS, WALL_HEIGHT, 20.4, 20.0, WALL_HEIGHT / 2, -13.8, 'Divisória Q103/Refúgio');
 createWallSegment(WALL_THICKNESS, WALL_HEIGHT, 20.4, -14.0, WALL_HEIGHT / 2, 13.8, 'Divisória Q104/Q105');
 createWallSegment(WALL_THICKNESS, WALL_HEIGHT, 20.4, 2.0, WALL_HEIGHT / 2, 13.8, 'Divisória Q105/Q106');
 
@@ -997,7 +1009,9 @@ createWallSegment(7.4, WALL_HEIGHT, WALL_THICKNESS, -13.9, WALL_HEIGHT / 2, -3.6
 createWallSegment(2.8, WALL_HEIGHT, WALL_THICKNESS, -8.8, WALL_HEIGHT / 2, -3.6, 'Parede Q102 Esq');
 createWallSegment(6.6, WALL_HEIGHT, WALL_THICKNESS, -1.3, WALL_HEIGHT / 2, -3.6, 'Parede Q102 Dir');
 createWallSegment(5.6, WALL_HEIGHT, WALL_THICKNESS, 4.8, WALL_HEIGHT / 2, -3.6, 'Parede Q103 Esq');
-createWallSegment(19.6, WALL_HEIGHT, WALL_THICKNESS, 20.2, WALL_HEIGHT / 2, -3.6, 'Parede Q103 Dir');
+createWallSegment(9.6, WALL_HEIGHT, WALL_THICKNESS, 15.2, WALL_HEIGHT / 2, -3.6, 'Parede Q103 Dir');
+createWallSegment(3.6, WALL_HEIGHT, WALL_THICKNESS, 21.8, WALL_HEIGHT / 2, -3.6, 'Parede Refúgio Esq');
+createWallSegment(3.6, WALL_HEIGHT, WALL_THICKNESS, 28.2, WALL_HEIGHT / 2, -3.6, 'Parede Refúgio Dir');
 
 // Paredes do Corredor Sul (Z = 3.6)
 createWallSegment(7.6, WALL_HEIGHT, WALL_THICKNESS, -26.2, WALL_HEIGHT / 2, 3.6, 'Parede Q104 Esq');
@@ -1222,7 +1236,7 @@ function createRoomFogShroud(envId, x, y, z, w, h, d, doorX, doorZ, tintColor) {
 }
 
 createRoomFogShroud('q102', -4.1, WALL_HEIGHT / 2, -13.8, 11.8, WALL_HEIGHT - 0.2, 19.8, -6.0, -3.6, 0x031824);
-createRoomFogShroud('q103', 16.0, WALL_HEIGHT / 2, -13.8, 27.4, WALL_HEIGHT - 0.2, 19.8, 9.0, -3.6, 0x160424);
+createRoomFogShroud('q103', 11.0, WALL_HEIGHT / 2, -13.8, 17.6, WALL_HEIGHT - 0.2, 19.8, 9.0, -3.6, 0x160424);
 createRoomFogShroud('q104', -22.0, WALL_HEIGHT / 2, 13.8, 15.4, WALL_HEIGHT - 0.2, 19.8, -21.0, 3.6, 0x081c04);
 createRoomFogShroud('q105', -6.0, WALL_HEIGHT / 2, 13.8, 15.4, WALL_HEIGHT - 0.2, 19.8, -11.0, 3.6, 0x1f1a04);
 createRoomFogShroud('q106', 16.0, WALL_HEIGHT / 2, 13.8, 27.4, WALL_HEIGHT - 0.2, 19.8, 13.0, 3.6, 0x121624);
@@ -2119,9 +2133,9 @@ createEnemy('enemy_101', 'Zumbi Andarilho', 'walker', -23.0, 1.0, -8.0, 56, 2.0,
 createEnemy('enemy_102', 'Lurker Mutante', 'walker', -6.0, 1.0, -10.0, 68, 2.3, 18, false, 'q102', 'enemy2');
 
 // Q.103: 3 Zumbis (Combate tático no Tech Lab)
-createEnemy('enemy_103_1', 'Cyborg Infectado Alpha', 'cyber', 18.0, 1.0, -16.0, 76, 2.4, 20, false, 'q103', 'enemy3');
-createEnemy('enemy_103_2', 'Cyborg Infectado Beta', 'cyber', 24.0, 1.0, -8.0, 76, 2.5, 20, false, 'q103', 'enemy1');
-createEnemy('enemy_103_3', 'Cyborg Infectado Gamma', 'cyber', 21.0, 1.0, -12.0, 76, 2.4, 20, false, 'q103', 'enemy2');
+createEnemy('enemy_103_1', 'Cyborg Infectado Alpha', 'cyber', 12.0, 1.0, -15.0, 76, 2.4, 20, false, 'q103', 'enemy3');
+createEnemy('enemy_103_2', 'Cyborg Infectado Beta', 'cyber', 17.0, 1.0, -8.0, 76, 2.5, 20, false, 'q103', 'enemy1');
+createEnemy('enemy_103_3', 'Cyborg Infectado Gamma', 'cyber', 14.5, 1.0, -12.0, 76, 2.4, 20, false, 'q103', 'enemy2');
 
 // Q.104: 2 Stalkers Ágeis (Recompensa da Shotgun)
 createEnemy('enemy_104_1', 'Parasita Botânico Alpha', 'stalker', -24.0, 1.0, 16.0, 88, 3.0, 22, false, 'q104', 'enemy2');
@@ -3152,6 +3166,7 @@ function toggleDoor(door) {
 createInteractiveDoor(-19.0, -3.6, '101', 'SUÍTE PRESIDENCIAL', true, null);
 createInteractiveDoor(-6.0, -3.6, '102', 'BANHEIRO LUXO', true, 'key_102');
 createInteractiveDoor(9.0, -3.6, '103', 'TECH LAB', true, 'key_103');
+createInteractiveDoor(25.0, -3.6, '107', 'REFÚGIO DA VITROLA', true, null);
 createInteractiveDoor(-21.0, 3.6, '104', 'SUÍTE BOTÂNICA', false, 'key_104');
 createInteractiveDoor(-11.0, 3.6, '105', 'LAVABO', false, 'key_105');
 createInteractiveDoor(13.0, 3.6, '106', 'CÂMARA TESTES', false, 'key_106');
@@ -3350,6 +3365,559 @@ createCrate(-11.0, 18.0, 1.6, 0.9, 1.2, 0x0284c7, 'Bancada Lavabo Q105');
 createCrate(8.5, 18.0, 2.2, 1.5, 2.2, 0xec4899, 'Caixa Aperture Q106');
 createCrate(15.0, 18.0, 2.6, 2.2, 2.6, 0x6366f1, 'Caixa Teste Q106');
 createBench(24.0, 18.0, -Math.PI / 2, 'Banco Observação Q106');
+
+// ==========================================================================
+// --- SISTEMA DE SAFE ROOM (REFÚGIO SEGURO, VITROLA RETRÔ & DESCANSO) ---
+// ==========================================================================
+
+const JUKEBOX_TRACKS = [
+  { id: 'track_1', title: 'Serenata da Meia-Noite', type: 'disco', icon: '💿', path: 'assets/sounds/background1.mp3', unlocked: true, desc: 'Disco de Vinil Clássico do Refúgio' },
+  { id: 'track_2', title: 'Ecos do Refúgio', type: 'fita', icon: '📼', path: 'assets/sounds/background2.mp3', unlocked: true, desc: 'Fita Cassete Lo-Fi Nostálgica' },
+  { id: 'track_3', title: 'Melodia Presidencial', type: 'disco', icon: '💿', path: 'assets/sounds/background3.mp3', unlocked: false, room: 'Q.101', desc: 'Disco de Ouro da Suíte Presidencial' },
+  { id: 'track_4', title: 'Frequência Sintética', type: 'fita', icon: '📼', path: 'assets/sounds/background4.mp3', unlocked: false, room: 'Q.103', desc: 'Fita de Dados do Tech Lab' },
+  { id: 'track_5', title: 'Sussurros do Jardim', type: 'disco', icon: '💿', path: 'assets/sounds/background5.mp3', unlocked: false, room: 'Q.104', desc: 'Disco Raro da Suíte Botânica' },
+];
+
+let currentJukeboxAudio = null;
+let currentPlayingTrackId = null;
+let isJukeboxPlaying = false;
+let vinylDiscMesh = null;
+let isPlayerRestingInBed = false;
+const collectibleMusicItems = [];
+
+// 1. Criação dos Móveis da Safe Room (Cama Luxuosa & Vitrola Gramofone)
+const safeRoomFurnitureGroup = new THREE.Group();
+
+// --- CAMA LUXUOSA DO REFÚGIO ---
+const bedGroup = new THREE.Group();
+bedGroup.position.set(26.2, 0, -20.6);
+
+// Cabeceira de madeira nobre entalhada
+const woodBedMat = new THREE.MeshStandardMaterial({ color: 0x3f2214, roughness: 0.55, metalness: 0.1 });
+const headboard = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.35, 0.16), woodBedMat);
+headboard.position.set(0, 0.85, -1.6);
+headboard.castShadow = true; headboard.receiveShadow = true;
+bedGroup.add(headboard);
+
+// Base de madeira da cama
+const bedBase = new THREE.Mesh(new THREE.BoxGeometry(2.36, 0.42, 3.2), woodBedMat);
+bedBase.position.set(0, 0.21, 0);
+bedBase.castShadow = true; bedBase.receiveShadow = true;
+bedGroup.add(bedBase);
+
+// Colchão macio
+const mattressMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.85 });
+const mattress = new THREE.Mesh(new THREE.BoxGeometry(2.24, 0.28, 3.05), mattressMat);
+mattress.position.set(0, 0.52, 0);
+mattress.castShadow = true; mattress.receiveShadow = true;
+bedGroup.add(mattress);
+
+// Cobertor vinho aveludado com detalhes clássicos
+const blanketMat = new THREE.MeshStandardMaterial({ color: 0x881337, roughness: 0.7 });
+const blanket = new THREE.Mesh(new THREE.BoxGeometry(2.28, 0.12, 2.15), blanketMat);
+blanket.position.set(0, 0.62, 0.45);
+blanket.castShadow = true; blanket.receiveShadow = true;
+bedGroup.add(blanket);
+
+// Travesseiros acolchoados
+const pillowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
+const pillow1 = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.16, 0.55), pillowMat);
+pillow1.position.set(-0.58, 0.68, -1.15);
+pillow1.rotation.x = 0.18;
+pillow1.castShadow = true; bedGroup.add(pillow1);
+
+const pillow2 = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.16, 0.55), pillowMat);
+pillow2.position.set(0.58, 0.68, -1.15);
+pillow2.rotation.x = 0.18;
+pillow2.castShadow = true; bedGroup.add(pillow2);
+
+safeRoomFurnitureGroup.add(bedGroup);
+
+// Colisor da Cama
+wallColliders.push({
+  minX: 25.0 - PLAYER_RADIUS,
+  maxX: 27.5 + PLAYER_RADIUS,
+  minZ: -22.4 - PLAYER_RADIUS,
+  maxZ: -19.0 + PLAYER_RADIUS,
+  name: 'Cama do Refúgio',
+  disabled: false
+});
+steppableBoxes.push({
+  minX: 25.0, maxX: 27.5, minZ: -22.4, maxZ: -19.0, height: 0.65, topY: 0.65, name: 'Cama Refúgio'
+});
+
+// Criado-mudo ao lado da cama com abajur
+const nightstand = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.65, 0.7), woodBedMat);
+nightstand.position.set(28.2, 0.325, -21.8);
+nightstand.castShadow = true; nightstand.receiveShadow = true;
+safeRoomFurnitureGroup.add(nightstand);
+
+// Abajur de cabeceira com luz acolhedora
+const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.14, 0.35, 12), new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.2 }));
+lampBase.position.set(28.2, 0.82, -21.8);
+safeRoomFurnitureGroup.add(lampBase);
+
+const lampShade = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 0.25, 16), new THREE.MeshStandardMaterial({ color: 0xfef3c7, emissive: 0xf59e0b, emissiveIntensity: 1.2, roughness: 0.8 }));
+lampShade.position.set(28.2, 1.05, -21.8);
+safeRoomFurnitureGroup.add(lampShade);
+
+const nightLampLight = new THREE.PointLight(0xf59e0b, 2.2, 8.0);
+nightLampLight.position.set(28.2, 1.05, -21.8);
+safeRoomFurnitureGroup.add(nightLampLight);
+
+// --- MÓVEL DA VITROLA RETRÔ (GRAMOFONE VINTAGE) ---
+const jukeboxGroup = new THREE.Group();
+jukeboxGroup.position.set(22.2, 0, -20.0);
+
+// Mesa aparadora de madeira escura nobre
+const tableTop = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 1.2), woodBedMat);
+tableTop.position.set(0, 0.78, 0);
+tableTop.castShadow = true; tableTop.receiveShadow = true;
+jukeboxGroup.add(tableTop);
+
+const tableLegMat = new THREE.MeshStandardMaterial({ color: 0x1f140e, roughness: 0.6 });
+const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.78, 12);
+[[-0.68, -0.48], [0.68, -0.48], [-0.68, 0.48], [0.68, 0.48]].forEach(([lx, lz]) => {
+  const leg = new THREE.Mesh(legGeo, tableLegMat);
+  leg.position.set(lx, 0.39, lz);
+  leg.castShadow = true;
+  jukeboxGroup.add(leg);
+});
+
+// Caixa do Gramofone (Base de mogno com entalhes)
+const gramoBaseMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.4, metalness: 0.15 });
+const gramoBase = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.22, 0.72), gramoBaseMat);
+gramoBase.position.set(0, 0.94, 0);
+gramoBase.castShadow = true;
+jukeboxGroup.add(gramoBase);
+
+// Prato giratório
+const platter = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.03, 32), new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.85, roughness: 0.2 }));
+platter.position.set(0, 1.06, 0);
+jukeboxGroup.add(platter);
+
+// Disco de Vinil 3D (Gira quando a música toca!)
+const vinylMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.35, metalness: 0.4 });
+vinylDiscMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.02, 32), vinylMat);
+vinylDiscMesh.position.set(0, 1.08, 0);
+
+// Selo central dourado do disco
+const centerLabel = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.10, 0.022, 24), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.4 }));
+centerLabel.position.set(0, 0.005, 0);
+vinylDiscMesh.add(centerLabel);
+jukeboxGroup.add(vinylDiscMesh);
+
+// Braço articulado do gramofone
+const brassMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.95, roughness: 0.15 });
+const armSupport = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.18, 12), brassMat);
+armSupport.position.set(0.24, 1.15, 0.24);
+jukeboxGroup.add(armSupport);
+
+const armTone = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.02), brassMat);
+armTone.position.set(0.12, 1.19, 0.12);
+armTone.rotation.y = -Math.PI / 4;
+jukeboxGroup.add(armTone);
+
+// Corneta Floral de Gramofone Vintage em Latão Dourado
+const hornGroup = new THREE.Group();
+hornGroup.position.set(0.18, 1.25, 0.18);
+hornGroup.rotation.z = 0.55;
+hornGroup.rotation.y = -0.7;
+
+const hornCone = new THREE.Mesh(new THREE.ConeGeometry(0.38, 0.75, 24, 1, true), brassMat);
+hornCone.position.y = 0.35;
+hornCone.rotation.x = Math.PI;
+hornGroup.add(hornCone);
+jukeboxGroup.add(hornGroup);
+
+// Luz dourada aconchegante focada na vitrola
+const jukeboxLight = new THREE.PointLight(0xf59e0b, 2.5, 7.0);
+jukeboxLight.position.set(0, 1.4, 0);
+jukeboxGroup.add(jukeboxLight);
+
+safeRoomFurnitureGroup.add(jukeboxGroup);
+
+// Colisor da Mesa da Vitrola
+wallColliders.push({
+  minX: 21.4 - PLAYER_RADIUS,
+  maxX: 23.0 + PLAYER_RADIUS,
+  minZ: -20.6 - PLAYER_RADIUS,
+  maxZ: -19.4 + PLAYER_RADIUS,
+  name: 'Vitrola do Refúgio',
+  disabled: false
+});
+steppableBoxes.push({
+  minX: 21.4, maxX: 23.0, minZ: -20.6, maxZ: -19.4, height: 0.8, topY: 0.8, name: 'Mesa Vitrola'
+});
+
+// Placa de Identificação e Lanterna Acolhedora do Refúgio (Corredor Norte)
+const safeRoomPlaqueGroup = new THREE.Group();
+safeRoomPlaqueGroup.position.set(25.0, 3.1, -3.42);
+
+const plaqueGeo = new THREE.BoxGeometry(2.2, 0.45, 0.08);
+const plaqueMat = new THREE.MeshStandardMaterial({
+  color: 0x1c1917,
+  roughness: 0.35,
+  metalness: 0.75
+});
+const plaqueMesh = new THREE.Mesh(plaqueGeo, plaqueMat);
+safeRoomPlaqueGroup.add(plaqueMesh);
+
+// Lanterna externa dourada em cima da porta do Refúgio
+const lanternLight = new THREE.PointLight(0xf59e0b, 3.5, 7.5);
+lanternLight.position.set(0, 0.25, 0.25);
+safeRoomPlaqueGroup.add(lanternLight);
+
+const lanternGeo = new THREE.SphereGeometry(0.12, 16, 16);
+const lanternMat = new THREE.MeshStandardMaterial({
+  color: 0xf59e0b,
+  emissive: 0xf59e0b,
+  emissiveIntensity: 2.5
+});
+const lanternMesh = new THREE.Mesh(lanternGeo, lanternMat);
+lanternMesh.position.set(0, 0.25, 0.18);
+safeRoomPlaqueGroup.add(lanternMesh);
+
+scene.add(safeRoomPlaqueGroup);
+
+scene.add(safeRoomFurnitureGroup);
+
+// 2. Criação dos Itens Colecionáveis de Música pelos Quartos
+function createMusicCollectible(trackDef, x, y, z) {
+  const itemGroup = new THREE.Group();
+  itemGroup.position.set(x, y, z);
+
+  const glowMat = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    emissive: 0xf59e0b,
+    emissiveIntensity: 1.5,
+    metalness: 0.8,
+    roughness: 0.2
+  });
+
+  if (trackDef.type === 'disco') {
+    const discMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.025, 24), glowMat);
+    discMesh.rotation.x = Math.PI / 3;
+    itemGroup.add(discMesh);
+  } else {
+    const tapeMesh = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.22, 0.06), glowMat);
+    tapeMesh.rotation.y = Math.PI / 4;
+    itemGroup.add(tapeMesh);
+  }
+
+  const pLight = new THREE.PointLight(0xf59e0b, 1.6, 3.5);
+  pLight.position.y = 0.2;
+  itemGroup.add(pLight);
+
+  scene.add(itemGroup);
+
+  const itemObj = {
+    def: trackDef,
+    group: itemGroup,
+    isCollected: trackDef.unlocked,
+    baseY: y,
+    rotSpeed: 1.8
+  };
+  itemGroup.visible = !itemObj.isCollected;
+  collectibleMusicItems.push(itemObj);
+  return itemObj;
+}
+
+// 3 Colecionáveis de Música nos Quartos:
+createMusicCollectible(JUKEBOX_TRACKS[2], -16.0, 1.05, -17.5); // Q.101 Suíte Presidencial
+createMusicCollectible(JUKEBOX_TRACKS[3], 6.0, 1.05, -14.0);   // Q.103 Tech Lab
+createMusicCollectible(JUKEBOX_TRACKS[4], -24.0, 1.05, 14.0);  // Q.104 Suíte Botânica
+
+// 3. Funções de Áudio e Controle da Vitrola
+function updateJukeboxUI() {
+  const tracklistContainer = document.getElementById('jukebox-tracklist');
+  const nowPlayingName = document.getElementById('jukebox-current-track-name');
+  const playingBadge = document.getElementById('jukebox-playing-indicator');
+  const vinylDiscUI = document.getElementById('vinyl-disc-ui');
+
+  const curTrack = JUKEBOX_TRACKS.find(t => t.id === currentPlayingTrackId);
+
+  if (nowPlayingName) {
+    nowPlayingName.textContent = curTrack ? `${curTrack.title} (${curTrack.type.toUpperCase()})` : 'Nenhuma música tocando';
+  }
+  if (playingBadge) {
+    if (isJukeboxPlaying) {
+      playingBadge.textContent = 'TOCANDO';
+      playingBadge.classList.add('active');
+    } else {
+      playingBadge.textContent = 'PARADO';
+      playingBadge.classList.remove('active');
+    }
+  }
+  if (vinylDiscUI) {
+    if (isJukeboxPlaying) vinylDiscUI.classList.add('spinning');
+    else vinylDiscUI.classList.remove('spinning');
+  }
+
+  if (tracklistContainer) {
+    tracklistContainer.innerHTML = '';
+    JUKEBOX_TRACKS.forEach(track => {
+      const itemEl = document.createElement('div');
+      itemEl.className = 'jukebox-track-item' + (!track.unlocked ? ' locked' : '') + (track.id === currentPlayingTrackId && isJukeboxPlaying ? ' playing' : '');
+
+      itemEl.innerHTML = `
+        <div class="track-left-info">
+          <span class="track-type-icon">${track.icon}</span>
+          <div class="track-texts">
+            <span class="track-title">${track.title}</span>
+            <span class="track-desc">${track.unlocked ? track.desc : `🔒 Encontre no quarto ${track.room}`}</span>
+          </div>
+        </div>
+        ${track.unlocked ? `
+          <button class="btn-play-track ${track.id === currentPlayingTrackId && isJukeboxPlaying ? 'playing-btn' : ''}">
+            ${track.id === currentPlayingTrackId && isJukeboxPlaying ? 'TOCANDO 🔊' : 'TOCAR ▶'}
+          </button>
+        ` : `
+          <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">BLOQUEADO</span>
+        `}
+      `;
+
+      if (track.unlocked) {
+        itemEl.addEventListener('click', () => {
+          if (track.id === currentPlayingTrackId && isJukeboxPlaying) {
+            stopJukeboxTrack();
+          } else {
+            playJukeboxTrack(track.id);
+          }
+        });
+      }
+
+      tracklistContainer.appendChild(itemEl);
+    });
+  }
+}
+
+function playJukeboxTrack(trackId) {
+  const track = JUKEBOX_TRACKS.find(t => t.id === trackId);
+  if (!track || !track.unlocked) return;
+
+  if (currentJukeboxAudio) {
+    try { currentJukeboxAudio.pause(); } catch (e) {}
+    currentJukeboxAudio = null;
+  }
+
+  pauseBackgroundBGM();
+
+  currentPlayingTrackId = trackId;
+  isJukeboxPlaying = true;
+
+  if (AUDIO_ENABLED) {
+    currentJukeboxAudio = new Audio(track.path);
+    currentJukeboxAudio.loop = true;
+    currentJukeboxAudio.volume = 0.45;
+    currentJukeboxAudio.play().catch(e => {
+      console.log('Audio playback prevented or missing track:', e);
+    });
+  }
+
+  updateJukeboxUI();
+}
+
+function stopJukeboxTrack() {
+  if (currentJukeboxAudio) {
+    try { currentJukeboxAudio.pause(); } catch (e) {}
+    currentJukeboxAudio = null;
+  }
+  isJukeboxPlaying = false;
+  currentPlayingTrackId = null;
+  updateJukeboxUI();
+}
+
+function openJukeboxModal() {
+  const modal = document.getElementById('jukebox-modal');
+  if (modal) {
+    updateJukeboxUI();
+    modal.classList.remove('hidden');
+  }
+}
+
+function closeJukeboxModal() {
+  const modal = document.getElementById('jukebox-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+// 4. Mecânica da Cama, Descanso e Salvamento
+function startRestingInBed() {
+  if (isPlayerDead) return;
+  isPlayerRestingInBed = true;
+
+  // Reposiciona o jogador suavemente deitado/sentado na cama do refúgio
+  playerGroup.position.set(26.2, 0.7, -20.6);
+  playerGroup.rotation.y = 0;
+  velocity.set(0, 0, 0);
+
+  // Cura o jogador totalmente
+  playerHealth = 100;
+  updatePlayerHealthUI();
+  playHealSound();
+
+  // Se nenhuma música estiver tocando na vitrola, liga automaticamente a Serenata do Refúgio
+  if (!isJukeboxPlaying) {
+    playJukeboxTrack('track_1');
+  }
+
+  // Salva o progresso do jogo
+  saveGameProgress();
+
+  // Exibe o overlay aconchegante de descanso
+  const sleepOverlay = document.getElementById('bed-sleep-overlay');
+  const nowPlayingLabel = document.getElementById('sleep-now-playing-label');
+  if (nowPlayingLabel) {
+    const curTrack = JUKEBOX_TRACKS.find(t => t.id === currentPlayingTrackId);
+    nowPlayingLabel.textContent = curTrack ? `Tocando: ${curTrack.title} (${curTrack.type.toUpperCase()}) 🎵` : 'Música relaxante da vitrola 🎵';
+  }
+  if (sleepOverlay) sleepOverlay.classList.remove('hidden');
+}
+
+function wakeUpFromBed() {
+  if (!isPlayerRestingInBed) return;
+  isPlayerRestingInBed = false;
+
+  // Levanta-se em pé ao lado da cama pronto para ação
+  playerGroup.position.set(24.8, 1.0, -20.6);
+  playerGroup.rotation.y = Math.PI / 2;
+
+  const sleepOverlay = document.getElementById('bed-sleep-overlay');
+  if (sleepOverlay) sleepOverlay.classList.add('hidden');
+
+  if (interactionPrompt) interactionPrompt.classList.remove('hidden');
+  if (promptText) promptText.textContent = 'Você acordou descansado e pronto! Vida 100% 💚';
+  setTimeout(() => {
+    if (promptText && promptText.textContent.includes('acordou')) {
+      if (interactionPrompt) interactionPrompt.classList.add('hidden');
+    }
+  }, 2200);
+}
+
+// 5. Sistema de Save e Load Game
+function saveGameProgress() {
+  try {
+    const saveData = {
+      health: playerHealth,
+      medkits: medkits,
+      equippedWeaponId: equippedWeaponId,
+      weaponInventory: {
+        revolver: { isAcquired: weaponInventory.revolver.isAcquired, loadedAmmo: weaponInventory.revolver.loadedAmmo, reserveAmmo: weaponInventory.revolver.reserveAmmo },
+        shotgun: { isAcquired: weaponInventory.shotgun.isAcquired, loadedAmmo: weaponInventory.shotgun.loadedAmmo, reserveAmmo: weaponInventory.shotgun.reserveAmmo }
+      },
+      acquiredKeys: Array.from(acquiredKeys),
+      unlockedTracks: JUKEBOX_TRACKS.filter(t => t.unlocked).map(t => t.id),
+      currentPlayingTrackId: currentPlayingTrackId,
+      character: selectedCharacter || 'jake',
+      outfit: characterOutfits[selectedCharacter || 'jake'] || 1,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('outbreak_hotel_savegame', JSON.stringify(saveData));
+    updateContinueGameButton();
+    console.log('Progresso salvo com sucesso na Safe Room!');
+  } catch (e) {
+    console.warn('Erro ao salvar no localStorage:', e);
+  }
+}
+
+function updateContinueGameButton() {
+  const btnContinue = document.getElementById('btn-continue-game');
+  if (!btnContinue) return;
+  const hasSave = !!localStorage.getItem('outbreak_hotel_savegame');
+  if (hasSave) {
+    btnContinue.classList.remove('hidden');
+  } else {
+    btnContinue.classList.add('hidden');
+  }
+}
+
+function loadSavedGame() {
+  try {
+    const raw = localStorage.getItem('outbreak_hotel_savegame');
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+
+    playerHealth = data.health || 100;
+    medkits = data.medkits !== undefined ? data.medkits : 1;
+    if (data.weaponInventory) {
+      if (data.weaponInventory.revolver) {
+        weaponInventory.revolver.isAcquired = data.weaponInventory.revolver.isAcquired;
+        weaponInventory.revolver.loadedAmmo = data.weaponInventory.revolver.loadedAmmo;
+        weaponInventory.revolver.reserveAmmo = data.weaponInventory.revolver.reserveAmmo;
+      }
+      if (data.weaponInventory.shotgun) {
+        weaponInventory.shotgun.isAcquired = data.weaponInventory.shotgun.isAcquired;
+        weaponInventory.shotgun.loadedAmmo = data.weaponInventory.shotgun.loadedAmmo;
+        weaponInventory.shotgun.reserveAmmo = data.weaponInventory.shotgun.reserveAmmo;
+      }
+    }
+    if (data.equippedWeaponId && weaponInventory[data.equippedWeaponId] && weaponInventory[data.equippedWeaponId].isAcquired) {
+      equipWeapon(data.equippedWeaponId);
+    }
+    if (Array.isArray(data.acquiredKeys)) {
+      data.acquiredKeys.forEach(k => acquiredKeys.add(k));
+    }
+    if (Array.isArray(data.unlockedTracks)) {
+      data.unlockedTracks.forEach(tid => {
+        const t = JUKEBOX_TRACKS.find(x => x.id === tid);
+        if (t) t.unlocked = true;
+      });
+    }
+
+    // Posiciona o jogador em pé dentro do Refúgio Seguro (Q.107)
+    playerGroup.position.set(25.0, 1.0, -17.0);
+    playerRotation = Math.PI;
+    playerGroup.rotation.y = playerRotation;
+    cameraYaw = Math.PI;
+
+    // Destranca e abre a porta do Refúgio
+    const safeDoor = interactiveDoors.find(d => d.roomNumber === '107');
+    if (safeDoor) {
+      safeDoor.isUnlocked = true;
+      safeDoor.isOpen = true;
+      safeDoor.targetAngle = Math.PI / 2;
+    }
+
+    startGame();
+    updatePlayerHealthUI();
+    updateWeaponsUI();
+    updateInventoryUI();
+    updateGoalHUD();
+
+    if (data.currentPlayingTrackId) {
+      playJukeboxTrack(data.currentPlayingTrackId);
+    } else {
+      playJukeboxTrack('track_1');
+    }
+
+    return true;
+  } catch (e) {
+    console.warn('Erro ao carregar save game:', e);
+    return false;
+  }
+}
+
+// Configura Listeners de Botões da Vitrola e Descanso
+const btnCloseJuke = document.getElementById('btn-close-jukebox');
+const btnCloseJukeBottom = document.getElementById('btn-jukebox-close-bottom');
+const btnStopJuke = document.getElementById('btn-jukebox-stop');
+const btnWakeUp = document.getElementById('btn-wake-up');
+const btnContinue = document.getElementById('btn-continue-game');
+
+if (btnCloseJuke) btnCloseJuke.addEventListener('click', closeJukeboxModal);
+if (btnCloseJukeBottom) btnCloseJukeBottom.addEventListener('click', closeJukeboxModal);
+if (btnStopJuke) btnStopJuke.addEventListener('click', stopJukeboxTrack);
+if (btnWakeUp) btnWakeUp.addEventListener('click', wakeUpFromBed);
+if (btnContinue) btnContinue.addEventListener('click', () => loadSavedGame());
+
+updateContinueGameButton();
+
+// Acordar com qualquer tecla quando deitado
+window.addEventListener('keydown', (e) => {
+  if (isPlayerRestingInBed) {
+    wakeUpFromBed();
+  }
+});
 
 // --- O PERSONAGEM (JOGADOR) ---
 const playerGroup = new THREE.Group();
@@ -5607,6 +6175,46 @@ function handleInteraction() {
     }
   }
 
+  // 4.1 Coletar Discos de Vinil e Fitas Cassete Colecionáveis (até 2.5m)
+  for (const mItem of collectibleMusicItems) {
+    if (!mItem.isCollected) {
+      const dist = playerPos.distanceTo(mItem.group.position);
+      if (dist < 2.5) {
+        mItem.isCollected = true;
+        mItem.group.visible = false;
+        mItem.def.unlocked = true;
+        playKeySound();
+        updateJukeboxUI();
+        if (interactionPrompt) interactionPrompt.classList.remove('hidden');
+        if (promptText) promptText.textContent = `🎵 Coletado: ${mItem.def.title} (${mItem.def.type.toUpperCase()})! Desbloqueado na Vitrola!`;
+        setTimeout(() => {
+          if (promptText && promptText.textContent.includes('Coletado:')) {
+            interactionPrompt.classList.add('hidden');
+          }
+        }, 2500);
+        return;
+      }
+    }
+  }
+
+  // 4.2 Cama Luxuosa do Refúgio (Descanso, Cura Total & Salvar Jogo) (até 2.8m)
+  const distToBed = playerPos.distanceTo(new THREE.Vector3(26.2, 1.0, -20.6));
+  if (distToBed < 2.8) {
+    if (isPlayerRestingInBed) {
+      wakeUpFromBed();
+    } else {
+      startRestingInBed();
+    }
+    return;
+  }
+
+  // 4.3 Vitrola Retrô do Refúgio (Música Lo-Fi / Clássica) (até 2.5m)
+  const distToJukebox = playerPos.distanceTo(new THREE.Vector3(22.2, 1.0, -20.0));
+  if (distToJukebox < 2.5) {
+    openJukeboxModal();
+    return;
+  }
+
   // 5. Checa Porta Mestre (até 3.2m)
   if (grandExitGate) {
     const distToExit = playerPos.distanceTo(new THREE.Vector3(grandExitGate.x, 1.0, grandExitGate.z));
@@ -5904,7 +6512,7 @@ function resetGameState() {
 
   for (const envId in roomEnvironments) {
     const env = roomEnvironments[envId];
-    env.isLit = (envId === 'corridor');
+    env.isLit = (envId === 'corridor' || envId === 'q107');
     if (env.rocker) env.rocker.rotation.x = env.isLit ? -0.22 : 0.22;
     if (env.ledMat) {
       const col = env.isLit ? 0x22c55e : 0xef4444;
@@ -6013,6 +6621,7 @@ function resetGameState() {
   updatePlayerHealthUI();
   updateGoalHUD();
   updateHUDLightStat();
+  updateContinueGameButton();
 }
 
 if (btnReset) btnReset.addEventListener('click', () => {
@@ -6048,7 +6657,8 @@ function getRoomIdAtPosition(px, pz) {
   if (pz < -3.6) {
     if (px < -10.2) return 'q101';
     if (px < 2.0) return 'q102';
-    return 'q103';
+    if (px < 20.0) return 'q103';
+    return 'q107';
   } else if (pz > 3.6) {
     if (px < -14.0) return 'q104';
     if (px < 2.0) return 'q105';
@@ -6335,6 +6945,19 @@ function animate(currentTime = performance.now()) {
     }
   }
 
+  // Animação dos discos e fitas de música colecionáveis 3D
+  for (const mItem of collectibleMusicItems) {
+    if (!mItem.isCollected && mItem.group.visible) {
+      mItem.group.rotation.y += delta * mItem.rotSpeed;
+      mItem.group.position.y = mItem.baseY + Math.sin(time * 3.0 + mItem.group.position.x) * 0.08;
+    }
+  }
+
+  // Rotação contínua do disco de vinil na vitrola 3D do Refúgio quando estiver tocando
+  if (vinylDiscMesh && isJukeboxPlaying) {
+    vinylDiscMesh.rotation.y += delta * 3.5;
+  }
+
   // Atualização das partículas de sangue 3D e ataques do chefe
   updateBloodParticles(delta);
   updateBossAttacks(delta);
@@ -6411,13 +7034,16 @@ function animate(currentTime = performance.now()) {
     }
 
     // Checa se o inimigo foi ativado (Aggro estrito apenas com porta aberta ou quando sofre dano)
+    const isPlayerInSafeRoom = (currentRoomId === 'q107');
     const doorNumber = enemy.targetRoom ? enemy.targetRoom.replace('q', '') : null;
     const roomDoor = doorNumber ? interactiveDoors.find(d => d.roomNumber === doorNumber) : null;
     const isDoorOpen = roomDoor ? roomDoor.isOpen : false;
     const enemyCurrentRoom = getRoomIdAtPosition(enemy.group.position.x, enemy.group.position.z);
     const isInSameRoom = (currentRoomId === enemy.targetRoom || (enemyCurrentRoom !== 'corridor' && currentRoomId === enemyCurrentRoom));
 
-    if ((isInSameRoom && isDoorOpen) || (isDoorOpen && distToPlayer < 14.0) || enemy.hp < enemy.maxHp) {
+    if (isPlayerInSafeRoom) {
+      enemy.isAggro = false;
+    } else if ((isInSameRoom && isDoorOpen) || (isDoorOpen && distToPlayer < 14.0) || enemy.hp < enemy.maxHp) {
       enemy.isAggro = true;
       enemy.hasMoved = true;
     }
@@ -6438,7 +7064,7 @@ function animate(currentTime = performance.now()) {
     }
 
     // Perseguição inteligente ao jogador (Entra e sai das salas pelas portas sem travar)
-    if (enemy.isAggro && !isPlayerDead && (isInSameRoom || isDoorOpen)) {
+    if (enemy.isAggro && !isPlayerDead && !isPlayerInSafeRoom && (isInSameRoom || isDoorOpen)) {
       enemy.hasMoved = true;
       let targetMovePos = playerGroup.position.clone();
 
@@ -6864,7 +7490,7 @@ function animate(currentTime = performance.now()) {
 
   const isMoving = inputVector.lengthSq() > 0;
 
-  if (isPlayerDead) {
+  if (isPlayerDead || isPlayerRestingInBed) {
     inputVector.set(0, 0, 0);
     velocity.x = 0;
     velocity.z = 0;
@@ -7272,6 +7898,28 @@ function animate(currentTime = performance.now()) {
     }
   }
 
+  // 4.1 Checa Colecionáveis de Música Próximos
+  if (!nearInteractive) {
+    for (const mItem of collectibleMusicItems) {
+      if (!mItem.isCollected) {
+        const dist = playerGroup.position.distanceTo(mItem.group.position);
+        if (dist < 2.5) { nearInteractive = { type: 'musicItem', mItem }; break; }
+      }
+    }
+  }
+
+  // 4.2 Checa Cama do Refúgio
+  if (!nearInteractive) {
+    const distBed = playerGroup.position.distanceTo(new THREE.Vector3(26.2, 1.0, -20.6));
+    if (distBed < 2.8) { nearInteractive = { type: 'bed' }; }
+  }
+
+  // 4.3 Checa Vitrola Retrô do Refúgio
+  if (!nearInteractive) {
+    const distJuke = playerGroup.position.distanceTo(new THREE.Vector3(22.2, 1.0, -20.0));
+    if (distJuke < 2.5) { nearInteractive = { type: 'jukebox' }; }
+  }
+
   // 5. Checa Porta Mestre
   if (!nearInteractive && grandExitGate) {
     const dist = playerGroup.position.distanceTo(new THREE.Vector3(grandExitGate.x, 1.0, grandExitGate.z));
@@ -7315,6 +7963,16 @@ function animate(currentTime = performance.now()) {
       const k = nearInteractive.keyObj.def;
       if (promptText) promptText.textContent = `Pegar ${k.name} em ${k.roomName} (E)`;
       setTouchInteractState('🖐️', 'PEGAR', 'key');
+    } else if (nearInteractive.type === 'musicItem') {
+      const item = nearInteractive.mItem.def;
+      if (promptText) promptText.textContent = `Pegar ${item.type === 'disco' ? 'Disco de Vinil 💿' : 'Fita Cassete 📼'}: ${item.title} (E)`;
+      setTouchInteractState('🎵', 'PEGAR', 'music');
+    } else if (nearInteractive.type === 'bed') {
+      if (promptText) promptText.textContent = isPlayerRestingInBed ? `Acordar e Levantar da Cama (E / Espaço)` : `Deitar na Cama e Salvar Progresso 🛏️💾 (E)`;
+      setTouchInteractState('🛏️', isPlayerRestingInBed ? 'ACORDAR' : 'DESCANSAR', 'bed');
+    } else if (nearInteractive.type === 'jukebox') {
+      if (promptText) promptText.textContent = isJukeboxPlaying ? `Vitrola Tocando 🎵 - Trocar / Parar Música (E)` : `Tocar Vitrola Retrô 🎵 (E)`;
+      setTouchInteractState('🎵', 'VITROLA', 'jukebox');
     } else if (nearInteractive.type === 'exitGate') {
       const g = nearInteractive.gate;
       if (!acquiredKeys.has('key_master')) {
