@@ -2937,7 +2937,7 @@ const allDoorMeshes = [];
 
 const hotelDoorTexture = textureLoader.load('assets/textures/porta_hotel_madeira.jpg', (tex) => {
   allDoorMeshes.forEach(mesh => {
-    if (mesh && mesh.material) {
+    if (mesh && mesh.material && mesh.material === hotelDoorMaterial) {
       if (mesh.material.map) {
         mesh.material.map.image = tex.image;
         mesh.material.map.needsUpdate = true;
@@ -2953,6 +2953,64 @@ const hotelDoorMaterial = new THREE.MeshStandardMaterial({
   roughness: 0.5,
   metalness: 0.1
 });
+
+// Textura Exclusiva de Alta Definição para a Grande Porta Principal de Saída
+const exitDoorTexture = textureLoader.load('assets/textures/porta_saida_principal.jpg', (tex) => {
+  allDoorMeshes.forEach(mesh => {
+    if (mesh && mesh.material && mesh.material === exitDoorMaterial) {
+      if (mesh.material.map) {
+        mesh.material.map.image = tex.image;
+        mesh.material.map.needsUpdate = true;
+      }
+      mesh.material.needsUpdate = true;
+    }
+  });
+});
+if (THREE.SRGBColorSpace) exitDoorTexture.colorSpace = THREE.SRGBColorSpace;
+
+const exitDoorMaterial = new THREE.MeshStandardMaterial({
+  map: exitDoorTexture,
+  roughness: 0.45,
+  metalness: 0.22
+});
+
+// Geometria de folha única para portas de quartos (com correção da inversão do trinco no lado interno)
+function createSingleDoorGeometry(w, h, d) {
+  const geo = new THREE.BoxGeometry(w, h, d);
+  const uv = geo.attributes.uv;
+  // Face -Z (face traseira, vista de dentro do cômodo norte ou pelo corredor no lado sul):
+  // No Three.js BoxGeometry padrão, os vértices 20 a 23 têm uv.x mapeado no sentido inverso,
+  // fazendo o trinco/maçaneta desenhado na textura ficar colado na dobradiça (x < 0).
+  // Invertendo uv.x na Face -Z, o trinco fica alinhado em x = +w/2 (borda livre de abertura)
+  // TANTO quando visto de fora (corredor) QUANTO de dentro do cômodo!
+  for (let i = 20; i <= 23; i++) {
+    uv.setX(i, 1.0 - uv.getX(i));
+  }
+  uv.needsUpdate = true;
+  return geo;
+}
+
+// Geometria de folha para a Porta Dupla Mestre de Saída
+function createExitGateLeafGeometry(isLeft) {
+  const geo = new THREE.BoxGeometry(0.14, 3.05, 1.95);
+  const uv = geo.attributes.uv;
+  // BoxGeometry:
+  // Face +X (lado exterior, vértices 0..3)
+  // Face -X (lado interior voltado para o corredor do hotel, vértices 4..7)
+  if (isLeft) {
+    // Folha Esquerda (vai de z = -1.95 [dobradiça externa] a z = 0 [centro onde as folhas se encontram])
+    // u vai de 0.0 na dobradiça externa até 0.5 no centro com puxadores centrais
+    uv.setX(0, 0.5); uv.setX(1, 0.0); uv.setX(2, 0.5); uv.setX(3, 0.0);
+    uv.setX(4, 0.0); uv.setX(5, 0.5); uv.setX(6, 0.0); uv.setX(7, 0.5);
+  } else {
+    // Folha Direita (vai de z = 0 [centro] a z = +1.95 [dobradiça externa])
+    // u vai de 0.5 no centro até 1.0 na dobradiça externa
+    uv.setX(0, 1.0); uv.setX(1, 0.5); uv.setX(2, 1.0); uv.setX(3, 0.5);
+    uv.setX(4, 0.5); uv.setX(5, 1.0); uv.setX(6, 0.5); uv.setX(7, 1.0);
+  }
+  uv.needsUpdate = true;
+  return geo;
+}
 
 function createWallFillerMesh(w, h, d, x, y, z, name = 'Parede Vão Porta') {
   const tex = hotelWallTexture.clone();
@@ -3020,11 +3078,11 @@ function createInteractiveDoor(x, z, roomNumber, roomTitle, isNorthSide, require
   rightTrim.position.set(0.95, 1.35, 0);
   doorGroup.add(rightTrim);
 
-  // 4. Folha da porta aumentada em 15% (altura 2.70m, largura 1.84m)
+  // 4. Folha da porta aumentada em 15% (altura 2.70m, largura 1.84m) com trinco alinhado em ambos os lados
   const pivotGroup = new THREE.Group();
   pivotGroup.position.set(-0.92, 0, 0);
 
-  const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(1.84, 2.70, 0.10), hotelDoorMaterial);
+  const doorPanel = new THREE.Mesh(createSingleDoorGeometry(1.84, 2.70, 0.10), hotelDoorMaterial);
   doorPanel.position.set(0.92, 1.35, 0);
   doorPanel.castShadow = true;
   doorPanel.receiveShadow = true;
@@ -3127,9 +3185,26 @@ function createGrandExitGate() {
     disabled: false
   });
 
+  // Moldura decorativa em carvalho escuro e ferro para o portal monumental da saída
+  const exitTrimMat = new THREE.MeshStandardMaterial({ color: 0x181512, roughness: 0.6, metalness: 0.25 });
+  const topTrim = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 4.04), exitTrimMat);
+  topTrim.position.set(0, 3.08, 0);
+  topTrim.castShadow = true;
+  gateGroup.add(topTrim);
+
+  const leftTrim = new THREE.Mesh(new THREE.BoxGeometry(0.22, 3.05, 0.10), exitTrimMat);
+  leftTrim.position.set(0, 1.525, -1.97);
+  leftTrim.castShadow = true;
+  gateGroup.add(leftTrim);
+
+  const rightTrim = new THREE.Mesh(new THREE.BoxGeometry(0.22, 3.05, 0.10), exitTrimMat);
+  rightTrim.position.set(0, 1.525, 1.97);
+  rightTrim.castShadow = true;
+  gateGroup.add(rightTrim);
+
   const pivotLeft = new THREE.Group();
   pivotLeft.position.set(0, 0, -1.95);
-  const leafLeft = new THREE.Mesh(new THREE.BoxGeometry(0.14, 3.05, 1.95), hotelDoorMaterial);
+  const leafLeft = new THREE.Mesh(createExitGateLeafGeometry(true), exitDoorMaterial);
   leafLeft.position.set(0, 1.525, 0.975);
   leafLeft.castShadow = true;
   leafLeft.receiveShadow = true;
@@ -3139,7 +3214,7 @@ function createGrandExitGate() {
 
   const pivotRight = new THREE.Group();
   pivotRight.position.set(0, 0, 1.95);
-  const leafRight = new THREE.Mesh(new THREE.BoxGeometry(0.14, 3.05, 1.95), hotelDoorMaterial);
+  const leafRight = new THREE.Mesh(createExitGateLeafGeometry(false), exitDoorMaterial);
   leafRight.position.set(0, 1.525, -0.975);
   leafRight.castShadow = true;
   leafRight.receiveShadow = true;

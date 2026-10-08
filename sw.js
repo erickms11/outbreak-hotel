@@ -1,4 +1,4 @@
-const CACHE_NAME = 'outbreak-hotel-v23';
+const CACHE_NAME = 'outbreak-hotel-v24';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -10,7 +10,8 @@ const ASSETS_TO_CACHE = [
   './assets/textures/chao_corredor_carpete.jpg',
   './assets/textures/parede_hotel_damask.jpg',
   './assets/textures/piso_madeira_quartos.jpg',
-  './assets/textures/porta_hotel_madeira.jpg'
+  './assets/textures/porta_hotel_madeira.jpg',
+  './assets/textures/porta_saida_principal.jpg'
 ];
 
 self.addEventListener('install', (event) => {
